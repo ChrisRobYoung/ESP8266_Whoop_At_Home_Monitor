@@ -1,0 +1,26 @@
+menu "Whoop_APP_Configuration_Parameters"
+    config WIFI_SSID
+        string "WiFi SSID"
+        default "myssid"
+        help
+            SSID (network name) for the example to connect to.
+
+    config WIFI_PASSWORD
+        string "WiFi Password"
+        default "mypassword"
+        help
+            WiFi password (WPA or WPA2) for the example to use.
+            Can be left blank if the network has no security set.
+
+    config CLIENT_ID
+    string "Whoop Client ID"
+        default "ABCD"
+        help
+            Whoop Client ID found on App Dashboard.
+
+    config CLIENT_SECRET
+    string "Whoop Client Secret"
+        default "ABCD"
+        help
+            Whoop Client Secret found on App Dashboard.
+endmenu
