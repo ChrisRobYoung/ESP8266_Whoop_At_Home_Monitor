@@ -61,7 +61,8 @@ typedef enum whoop_data_opt
 
     WHOOP_DATA_OPT_RECOVERY_CYCLE_ID =                                       0x8000,
     WHOOP_DATA_OPT_RECOVERY_SLEEP_ID =                                       0x8001,
-    WHOOP_DATA_OPT_RECOVERY_USER_CALIBRATING =                               0x8002,
+    WHOOP_DATA_OPT_RECVOERY_SCORE_STATE =                                    0x8002,
+    WHOOP_DATA_OPT_RECOVERY_USER_CALIBRATING =                               0x8003,
     WHOOP_DATA_OPT_RECOVERY_RECOVERY_SCORE =                                 0x8100,
     WHOOP_DATA_OPT_RECOVERY_RESTING_HEART_RATE =                             0x8101,
     WHOOP_DATA_OPT_RECOVERY_HRV_RMSSD_MILLI =                                0x8102,
