@@ -3,6 +3,15 @@
 
 typedef void * whoop_data_handle_t;
 
+typedef enum whoop_data_status
+{
+    WHOOP_DATA_STATUS_OK =                      0,
+
+    WHOOP_DATA_STATUS_ID_NOT_FOUND =            -100,
+    WHOOP_DATA_STATUS_NO_RECORDINGS
+} whoop_data_status_n;
+
+
 typedef enum whoop_score_state
 {
     WHOOP_SCORE_STATE_SCORED,

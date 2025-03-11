@@ -123,9 +123,20 @@ whoop_cycle_data_t *g_cycle_data_ptr_list[MAX_NUMBER_RECORDINGS];
 whoop_workout_data_t *g_workout_data_ptr_list[MAX_NUMBER_RECORDINGS];
 whoop_recovery_data_t *g_recovery_data_ptr_list[MAX_NUMBER_RECORDINGS];
 
+static int g_cycle_data_record_count = 0;
+static int g_workout_data_record_count = 0;
+static int g_sleep_data_record_count = 0;
+static int g_recovery_data_record_count = 0;
+
+whoop_data_handle_t g_most_recent_sleep = NULL;
+whoop_data_handle_t g_most_recent_cycle = NULL;
+whoop_data_handle_t g_most_recent_workout = NULL;
+whoop_data_handle_t g_most_recent_recovery = NULL;
+
+
 whoop_data_t g_whoop_data;
 
-// Local functions
+// Local functions  (Place holders if memory management is introduced)
 void discard_cycle_data(whoop_cycle_data_t *cycle_data)
 {
 
@@ -164,6 +175,7 @@ int init_whoop_data(void)
     g_whoop_data.sleep_list = g_sleep_data_ptr_list;
     g_whoop_data.cycle_list = g_cycle_data_ptr_list;
     g_whoop_data.workout_list = g_workout_data_ptr_list;
+    return WHOOP_DATA_STATUS_OK;
 }
 int discard_whoop_data(void)
 {   
@@ -171,32 +183,136 @@ int discard_whoop_data(void)
     for(index = 0; index <g_whoop_data.n_cycle_data_recorded; index++)  discard_cycle_data(g_whoop_data.cycle_list[index]);
     for(index = 0; index <g_whoop_data.n_recovery_data_recorded; index++)  discard_recovery_data(g_whoop_data.recovery_list[index]);    
     for(index = 0; index <g_whoop_data.n_sleep_data_recorded; index++)  discard_sleep_data(g_whoop_data.sleep_list[index]);    
-    for(index = 0; index <g_whoop_data.n_workout_data_recorded; index++)  discard_workout_data(g_whoop_data.workout_list[index]);        
+    for(index = 0; index <g_whoop_data.n_workout_data_recorded; index++)  discard_workout_data(g_whoop_data.workout_list[index]); 
+    return WHOOP_DATA_STATUS_OK;      
 }
 
 /*Sleep ID or 0 for most recent*/
 int get_whoop_sleep_handle_by_id(int id, whoop_data_handle_t *handle)
-{}
+{
+    if(g_whoop_data.n_sleep_data_recorded == 0)
+        return WHOOP_DATA_STATUS_NO_RECORDINGS;
+    if(id == 0)
+    {
+        *handle = g_most_recent_sleep;
+        return WHOOP_DATA_STATUS_OK;
+    }
+    for(int index = 0; index < g_whoop_data.n_sleep_data_recorded; index++)
+    {
+        if(g_whoop_data.sleep_list[index]->sleep_ints.id == id)
+        {
+            *handle = (whoop_data_handle_t) g_whoop_data.sleep_list[index];
+            return WHOOP_DATA_STATUS_OK;
+        }
+    }
+    return WHOOP_DATA_STATUS_ID_NOT_FOUND;
+}
+
 int create_whoop_sleep_data(int id, whoop_data_handle_t *handle)
-{}
+{
+    whoop_sleep_data_t *sleep_to_write = g_whoop_data.sleep_list[g_sleep_data_record_count % MAX_NUMBER_RECORDINGS];
+    memset( sleep_to_write, 0, sizeof(whoop_sleep_data_t) );
+    sleep_to_write->sleep_ints.id = id;
+    g_sleep_data_record_count++;
+    g_most_recent_sleep = (whoop_data_handle_t) sleep_to_write;
+    if(handle) *handle = g_most_recent_sleep;
+    return WHOOP_DATA_STATUS_OK;
+}
 
 /*Cycle ID or 0 for most recent*/
 int get_whoop_cycle_handle_by_id(int id, whoop_data_handle_t *handle)
-{}
+{
+    if(g_whoop_data.n_cycle_data_recorded == 0)
+        return WHOOP_DATA_STATUS_NO_RECORDINGS;
+    if(id == 0)
+    {
+        *handle = g_most_recent_cycle;
+        return WHOOP_DATA_STATUS_OK;
+    }
+    for(int index = 0; index < g_whoop_data.n_cycle_data_recorded; index++)
+    {
+        if(g_whoop_data.cycle_list[index]->cycle_ints.id == id)
+        {
+            *handle = (whoop_data_handle_t) g_whoop_data.cycle_list[index];
+            return WHOOP_DATA_STATUS_OK;
+        }
+    }
+    return WHOOP_DATA_STATUS_ID_NOT_FOUND;
+}
 int create_whoop_cycle_data(int id, whoop_data_handle_t *handle)
-{}
+{
+    whoop_cycle_data_t *cycle_to_write = g_whoop_data.sleep_list[g_cycle_data_record_count % MAX_NUMBER_RECORDINGS];
+    memset( cycle_to_write, 0, sizeof(whoop_cycle_data_t) );
+    cycle_to_write->cycle_ints.id = id;
+    g_cycle_data_record_count++;
+    g_most_recent_cycle = (whoop_data_handle_t) cycle_to_write;
+    if(handle) *handle = g_most_recent_cycle;
+    return WHOOP_DATA_STATUS_OK;
+}
 
 /*Workout ID or 0 for most recent*/
 int get_whoop_workout_handle_by_id(int id, whoop_data_handle_t *handle)
-{}
+{
+    if(g_whoop_data.n_workout_data_recorded == 0)
+        return WHOOP_DATA_STATUS_NO_RECORDINGS;
+    if(id == 0)
+    {
+        *handle = g_most_recent_workout;
+        return WHOOP_DATA_STATUS_OK;
+    }
+    for(int index = 0; index < g_whoop_data.n_workout_data_recorded; index++)
+    {
+        if(g_whoop_data.workout_list[index]->workout_ints.id == id)
+        {
+            *handle = (whoop_data_handle_t) g_whoop_data.workout_list[index];
+            return WHOOP_DATA_STATUS_OK;
+        }
+    }
+    return WHOOP_DATA_STATUS_ID_NOT_FOUND;
+}
 int create_whoop_workout_data(int id, whoop_data_handle_t *handle)
-{}
+{
+    whoop_workout_data_t *workout_to_write = g_whoop_data.workout_list[g_workout_data_record_count % MAX_NUMBER_RECORDINGS];
+    memset( workout_to_write, 0, sizeof(whoop_workout_data_t) );
+    workout_to_write->workout_ints.id = id;
+    g_workout_data_record_count++;
+    g_most_recent_workout = (whoop_data_handle_t) workout_to_write;
+    if(handle) *handle = g_most_recent_workout;
+    return WHOOP_DATA_STATUS_OK;
+}
 
 /*ID can be either sleep or cycle id related to recovery or 0 for most recent*/
 int get_whoop_recovery_handle_by_id(int id, whoop_data_handle_t *handle)
-{}
+{
+    if(g_whoop_data.n_recovery_data_recorded == 0)
+        return WHOOP_DATA_STATUS_NO_RECORDINGS;
+    if(id == 0)
+    {
+        *handle = g_most_recent_recovery;
+        return WHOOP_DATA_STATUS_OK;
+    }
+    for(int index = 0; index < g_whoop_data.n_recovery_data_recorded; index++)
+    {
+        if(g_whoop_data.recovery_list[index]->recovery_ints.sleep_id == id 
+            || g_whoop_data.recovery_list[index]->recovery_ints.cycle_id == id)
+        {
+            *handle = (whoop_data_handle_t) g_whoop_data.recovery_list[index];
+            return WHOOP_DATA_STATUS_OK;
+        }
+    }
+    return WHOOP_DATA_STATUS_ID_NOT_FOUND;
+}
 int create_whoop_recovery_data(int sleep_id, int cycle_id, whoop_data_handle_t *handle)
-{}
+{
+    whoop_recovery_data_t *recovery_to_write = g_whoop_data.recovery_list[g_recovery_data_record_count % MAX_NUMBER_RECORDINGS];
+    memset( recovery_to_write, 0, sizeof(whoop_recovery_data_t) );
+    recovery_to_write->recovery_ints.sleep_id = sleep_id;
+    recovery_to_write->recovery_ints.cycle_id = cycle_id;
+    g_recovery_data_record_count++;
+    g_most_recent_recovery = (whoop_data_handle_t) recovery_to_write;
+    if(handle) *handle = g_most_recent_recovery;
+    return WHOOP_DATA_STATUS_OK;
+}
 
 
 int set_whoop_data(whoop_data_handle_t handle, whoop_data_opt_n whoop_data_opt, ...)
