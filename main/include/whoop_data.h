@@ -8,7 +8,8 @@ typedef enum whoop_data_status
     WHOOP_DATA_STATUS_OK =                      0,
 
     WHOOP_DATA_STATUS_ID_NOT_FOUND =            -100,
-    WHOOP_DATA_STATUS_NO_RECORDINGS
+    WHOOP_DATA_STATUS_NO_RECORDINGS,
+    WHOOP_DATA_STATUS_INVALID_OPTION
 } whoop_data_status_n;
 
 

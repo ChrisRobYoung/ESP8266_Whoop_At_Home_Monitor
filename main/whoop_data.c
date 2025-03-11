@@ -1,8 +1,14 @@
 #include <string.h>
+#include <stdarg.h>
 #include "whoop_data.h"
 
 // Defines
 #define MAX_NUMBER_RECORDINGS 5
+
+#define WHOOP_SLEEP_BIT_ID  0x0001
+#define WHOOP_CYCLE_BIT_ID  0x0002
+#define WHOOP_WORKOUT_BIT_ID  0x0004
+#define WHOOP_RECOVERY_BIT_ID  0x0008
 
 // Types 
 typedef struct whoop_recovery_ints
@@ -152,6 +158,39 @@ void discard_sleep_data(whoop_sleep_data_t *sleep_data)
 void discard_recovery_data(whoop_recovery_data_t *recovery_data)
 {
 
+}
+int deconstruct_whoop_data_opt(whoop_data_handle_t handle, whoop_data_opt_n whoop_data_opt, int **int_array_out, float **float_array_out, int *data_is_int_bool_out, int *data_offset_out)
+{
+    switch( (whoop_data_opt & 0xf000) >> 8)
+    {
+        case WHOOP_SLEEP_BIT_ID:
+            whoop_sleep_data_t *sleep_data = (whoop_sleep_data_t *) handle;
+            *int_array_out = &sleep_data->sleep_ints.id;
+            *float_array_out = &sleep_data->sleep_floats.respiratory_rate;
+            break;
+        case WHOOP_CYCLE_BIT_ID:
+            whoop_cycle_data_t *cycle_data = (whoop_cycle_data_t *) handle;
+            *int_array_out = &cycle_data->cycle_ints.id;
+            *float_array_out = &cycle_data->cycle_floats.strain;    
+            break;
+        case WHOOP_RECOVERY_BIT_ID:
+            whoop_recovery_data_t *recovery_data = (whoop_recovery_data_t *) handle;
+            *int_array_out = &recovery_data->recovery_ints.cycle_id;
+            *float_array_out = &recovery_data->recovery_floats.recovery_score;    
+            break;
+        case WHOOP_WORKOUT_BIT_ID:
+            whoop_workout_data_t *workout_data = (whoop_workout_data_t *) handle;
+            *int_array_out = &workout_data->workout_ints.id;
+            *float_array_out = &workout_data->workout_floats.strain;    
+            break;
+        default:
+            return WHOOP_DATA_STATUS_INVALID_OPTION;
+    }
+
+    *data_is_int_bool_out = (whoop_data_opt &0x0100) ? 1 : 0;
+    *data_offset_out = whoop_data_opt & 0x00ff;
+    
+    return WHOOP_DATA_STATUS_OK;
 }
 
 // Global functions
@@ -316,6 +355,44 @@ int create_whoop_recovery_data(int sleep_id, int cycle_id, whoop_data_handle_t *
 
 
 int set_whoop_data(whoop_data_handle_t handle, whoop_data_opt_n whoop_data_opt, ...)
-{}
+{
+    int *int_array_ptr = NULL;
+    float *float_array_ptr = NULL;
+    int data_is_int = 0;
+    int data_array_offset = 0;
+    if(deconstruct_whoop_data_opt(handle, whoop_data_opt, &int_array_ptr, &float_array_ptr, &data_is_int, &data_array_offset))
+        return WHOOP_DATA_STATUS_INVALID_OPTION;
+    
+    va_list argptr;
+    va_start (argptr, 1);
+
+    if(data_is_int)
+    {
+        int data_value = va_arg(argptr, int);
+        *(int_array_ptr + data_array_offset) = data_value;
+    }
+    else
+    {
+        float data_value = va_arg(argptr, float); 
+        *(float_array_ptr + data_array_offset) = data_value;
+    }
+    va_end (argptr);
+    return WHOOP_DATA_STATUS_OK;
+}
+
 int get_whoop_data(whoop_data_handle_t handle, whoop_data_opt_n whoop_data_opt, void *data_out)
-{}
+{
+    int *int_array_ptr = NULL;
+    float *float_array_ptr = NULL;
+    int data_is_int = 0;
+    int data_array_offset = 0;
+    if(deconstruct_whoop_data_opt(handle, whoop_data_opt, &int_array_ptr, &float_array_ptr, &data_is_int, &data_array_offset))
+        return WHOOP_DATA_STATUS_INVALID_OPTION;
+
+    if(data_is_int)
+        *( (int *) data_out ) = *(int_array_ptr + data_array_offset);
+    else
+        *( (float *) data_out ) = *(float_array_ptr + data_array_offset);
+
+    return WHOOP_DATA_STATUS_OK;
+}
