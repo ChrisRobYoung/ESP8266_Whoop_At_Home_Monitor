@@ -303,6 +303,22 @@ esp_err_t whoop_print_get_handler(httpd_req_t *req)
     {
         ESP_LOGI(TAG, "No workout data recorded yet");
     }
+    if(!get_whoop_sleep_handle_by_id(0, &handle))
+    {
+        print_whoop_sleep_data(handle);
+    }
+    else
+    {
+        ESP_LOGI(TAG, "No sleep data recorded yet");
+    }
+    if(!get_whoop_recovery_handle_by_id(0, &handle))
+    {
+        print_whoop_recovery_data(handle);
+    }
+    else
+    {
+        ESP_LOGI(TAG, "No workout data recorded yet");
+    }
     httpd_resp_set_hdr(req, "User", "ESP8266");
     httpd_resp_send(req, NULL, 0);
 

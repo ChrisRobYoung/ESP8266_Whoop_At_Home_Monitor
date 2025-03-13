@@ -179,7 +179,7 @@ int deconstruct_whoop_data_opt(whoop_data_handle_t handle, whoop_data_opt_n whoo
             cycle_data = (whoop_cycle_data_t *) handle;
             *int_array_out = &cycle_data->cycle_ints.id;
             *float_array_out = &cycle_data->cycle_floats.strain;    
-            //ESP_LOGI(TAG, "Data opt is cycle data.");
+            //ESP_LOGI(TAG, "Data opt is sleep data.");
             break;
         case WHOOP_RECOVERY_BIT_ID:
             recovery_data = (whoop_recovery_data_t *) handle;
@@ -263,7 +263,7 @@ int create_whoop_sleep_data(int id, whoop_data_handle_t *handle)
     return WHOOP_DATA_STATUS_OK;
 }
 
-/*Cycle ID or 0 for most recent*/
+/*sleep ID or 0 for most recent*/
 int get_whoop_cycle_handle_by_id(int id, whoop_data_handle_t *handle)
 {
     if(g_most_recent_cycle == NULL)
@@ -327,7 +327,7 @@ int create_whoop_workout_data(int id, whoop_data_handle_t *handle)
     return WHOOP_DATA_STATUS_OK;
 }
 
-/*ID can be either sleep or cycle id related to recovery or 0 for most recent*/
+/*ID can be either sleep or sleep id related to recovery or 0 for most recent*/
 int get_whoop_recovery_handle_by_id(int id, whoop_data_handle_t *handle)
 {
     if(g_most_recent_recovery == NULL)
@@ -407,21 +407,16 @@ int get_whoop_data(whoop_data_handle_t handle, whoop_data_opt_n whoop_data_opt, 
     return WHOOP_DATA_STATUS_OK;
 }
 
-void print_whoop_data_all(void)
-{
-
-}
-
 void print_whoop_cycle_data(whoop_data_handle_t handle)
 {
-    whoop_cycle_data_t *cycle = (whoop_cycle_data_t *) handle;
-    ESP_LOGI(TAG, "Cycle ID: %d", cycle->cycle_ints.id);
-    if(cycle->cycle_ints.score_state == WHOOP_SCORE_STATE_SCORED)
+    whoop_cycle_data_t *sleep = (whoop_cycle_data_t *) handle;
+    ESP_LOGI(TAG, "sleep ID: %d", sleep->cycle_ints.id);
+    if(sleep->cycle_ints.score_state == WHOOP_SCORE_STATE_SCORED)
     {
-        ESP_LOGI(TAG, "\tAverage Heart Rate: %d", cycle->cycle_ints.average_heart_rate);
-        ESP_LOGI(TAG, "\tMax Heart Rate: %d", cycle->cycle_ints.max_heart_rate);
-        ESP_LOGI(TAG, "\tStrain: %.2f", cycle->cycle_floats.strain);
-        ESP_LOGI(TAG, "\tKilojoule: %.2f", cycle->cycle_floats.kilojoule);
+        ESP_LOGI(TAG, "\tAverage Heart Rate: %d", sleep->cycle_ints.average_heart_rate);
+        ESP_LOGI(TAG, "\tMax Heart Rate: %d", sleep->cycle_ints.max_heart_rate);
+        ESP_LOGI(TAG, "\tStrain: %.2f", sleep->cycle_floats.strain);
+        ESP_LOGI(TAG, "\tKilojoule: %.2f", sleep->cycle_floats.kilojoule);
     }
     else
     {
@@ -453,4 +448,61 @@ void print_whoop_workout_data(whoop_data_handle_t handle)
     {
         ESP_LOGI(TAG, "\tCycle not scored.");
     }
+}
+
+void print_whoop_sleep_data(whoop_data_handle_t handle)
+{
+    whoop_sleep_data_t *sleep = (whoop_sleep_data_t *) handle;
+    ESP_LOGI(TAG, "Sleep ID: %d", sleep->sleep_ints.id);
+    if(sleep->sleep_ints.score_state == WHOOP_SCORE_STATE_SCORED)
+    {
+        ESP_LOGI(TAG, "\tWas nap: %d", sleep->sleep_ints.nap);
+        ESP_LOGI(TAG, "\tTotal time in bed [ms]: %d", sleep->sleep_ints.total_in_bed_time_milli);
+        ESP_LOGI(TAG, "\tTotal awake time [ms]: %d", sleep->sleep_ints.total_awake_time_milli);
+        ESP_LOGI(TAG, "\tTotal no data time [ms]: %d", sleep->sleep_ints.total_no_data_time_milli);
+        ESP_LOGI(TAG, "\tTotal light sleep time [ms]: %d", sleep->sleep_ints.total_light_sleep_time_milli);
+        ESP_LOGI(TAG, "\tTotal slow wave time [ms]: %d", sleep->sleep_ints.total_slow_wave_sleep_time_milli);
+        ESP_LOGI(TAG, "\tTotal rem time [ms]: %d", sleep->sleep_ints.total_rem_sleep_time_milli);
+        ESP_LOGI(TAG, "\tSleep cycle count: %d", sleep->sleep_ints.sleep_cycle_count);
+        ESP_LOGI(TAG, "\tDisturbance count: %d", sleep->sleep_ints.disturbance_count);
+        ESP_LOGI(TAG, "\tBaseline sleep needed [ms]: %d", sleep->sleep_ints.baseline_milli);
+        ESP_LOGI(TAG, "\tNeed from sleep debt [ms]: %d", sleep->sleep_ints.need_from_sleep_debt_milli);
+        ESP_LOGI(TAG, "\tNeed from recent strain [ms]: %d", sleep->sleep_ints.need_from_recent_strain_milli);
+        ESP_LOGI(TAG, "\tNeed from recent nap [ms]: %d", sleep->sleep_ints.need_from_recent_nap_milli);
+
+        ESP_LOGI(TAG, "\tRespiratory rate: %.2f", sleep->sleep_floats.respiratory_rate);
+        ESP_LOGI(TAG, "\tSleep performance percentage: %.2f", sleep->sleep_floats.sleep_performance_percentage);
+        ESP_LOGI(TAG, "\tSleep consistency percentage: %.2f", sleep->sleep_floats.sleep_consistency_percentage);
+        ESP_LOGI(TAG, "\tSleep efficiency percentage: %.2f", sleep->sleep_floats.sleep_efficiency_percentage);
+    }
+    else
+    {
+        ESP_LOGI(TAG, "\tSleep not scored.");
+    }
+}
+
+void print_whoop_recovery_data(whoop_data_handle_t handle)
+{
+    whoop_recovery_data_t *recovery = (whoop_recovery_data_t *) handle;
+    ESP_LOGI(TAG, "Recovery Sleep ID: %d", recovery->recovery_ints.sleep_id);
+    ESP_LOGI(TAG, "Recovery Cycle ID: %d", recovery->recovery_ints.cycle_id);
+    if(recovery->recovery_ints.score_state == WHOOP_SCORE_STATE_SCORED)
+    {
+        ESP_LOGI(TAG, "\tUser calibrating: %d", recovery->recovery_ints.user_calibrating);
+        ESP_LOGI(TAG, "\tRecovery score: %.2f", recovery->recovery_floats.recovery_score);
+        ESP_LOGI(TAG, "\tResting heart rate: %.2f", recovery->recovery_floats.resting_heart_rate);
+        ESP_LOGI(TAG, "\tHRV [ms]: %.2f", recovery->recovery_floats.hrv_rmssd_milli);
+        ESP_LOGI(TAG, "\tSP02 percentage: %.2f", recovery->recovery_floats.spo2_percentage);
+        ESP_LOGI(TAG, "\tSkin temp [c]: %.2f", recovery->recovery_floats.skin_temp_celsius);
+    
+    }
+    else
+    {
+        ESP_LOGI(TAG, "\tRecovery not scored.");
+    }
+}
+
+void print_whoop_data_all(void)
+{
+    //implement later
 }

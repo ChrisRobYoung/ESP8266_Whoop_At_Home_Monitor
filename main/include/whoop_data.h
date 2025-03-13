@@ -71,13 +71,13 @@ typedef enum whoop_data_opt
 
     WHOOP_DATA_OPT_RECOVERY_CYCLE_ID =                                       0x8000,
     WHOOP_DATA_OPT_RECOVERY_SLEEP_ID =                                       0x8001,
-    WHOOP_DATA_OPT_RECVOERY_SCORE_STATE =                                    0x8002,
+    WHOOP_DATA_OPT_RECOVERY_SCORE_STATE =                                    0x8002,
     WHOOP_DATA_OPT_RECOVERY_USER_CALIBRATING =                               0x8003,
     WHOOP_DATA_OPT_RECOVERY_RECOVERY_SCORE =                                 0x8100,
     WHOOP_DATA_OPT_RECOVERY_RESTING_HEART_RATE =                             0x8101,
     WHOOP_DATA_OPT_RECOVERY_HRV_RMSSD_MILLI =                                0x8102,
     WHOOP_DATA_OPT_RECOVERY_SPO2_PERCENTAGE =                                0x8103,
-    WHOOP_DATA_OPT_RECOVERY_SKIN_TEMPT_CELCIUS =                             0x8104
+    WHOOP_DATA_OPT_RECOVERY_SKIN_TEMP_CELCIUS =                             0x8104
 } whoop_data_opt_n;
 
 int init_whoop_data(void);
@@ -104,6 +104,8 @@ int set_whoop_data(whoop_data_handle_t handle, whoop_data_opt_n whoop_data_opt, 
 int get_whoop_data(whoop_data_handle_t handle, whoop_data_opt_n whoop_data_opt, void *data_out);
 
 void print_whoop_cycle_data(whoop_data_handle_t handle);
+void print_whoop_sleep_data(whoop_data_handle_t handle);
+void print_whoop_recovery_data(whoop_data_handle_t handle);
 void print_whoop_workout_data(whoop_data_handle_t handle);
 void print_whoop_data_all(void);
 

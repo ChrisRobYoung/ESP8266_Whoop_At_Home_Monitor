@@ -165,118 +165,154 @@ Error:
     return status;
 }
 
-// static int parse_recovery_json_data(const char *json_data, whoop_recovery_data_t *recovery)
-// {
-//     int status = 0;
-//     cJSON *json = cJSON_Parse(json_data);
-//     if(!json)
-//     {
-//         ESP_LOGI(TAG, "Could not parse JSON.");
-//         return -1;
-//     }
+static int parse_recovery_json_data(const char *json_data)
+{
+    whoop_data_handle_t handle = NULL;
+    whoop_score_state_n score_state_value = 0;
+    char *score_state_str = NULL;
+    int status = 0;
+    int sleep_id = 0;
+    int cycle_id = 0;
+    const cJSON *records = NULL;
+    const cJSON *record = NULL;
+    const cJSON *score = NULL;
+    const cJSON *item = NULL;
+    cJSON *json = cJSON_Parse(json_data);
+    if(!json)
+    {
+        ESP_LOGI(TAG, "Could not parse JSON.");
+        return -1;
+    }
 
-//     const cJSON *records = NULL;
-//     const cJSON *record = NULL;
-//     const cJSON *score = NULL;
-//     const cJSON *item = NULL;
-//     GET_REQUIRED_JSON_OBJ(json, records, "records");
-//     record = cJSON_GetArrayItem(records, 0);
-//     ASSIGN_REQUIRED_JSON_INT(record, item, "cycle_id", recovery->cycle_id);
-//     ASSIGN_REQUIRED_JSON_INT(record, item, "sleep_id", recovery->sleep_id);
+    GET_REQUIRED_JSON_OBJ(json, records, "records");
+    record = cJSON_GetArrayItem(records, 0);
+    if( !( item = cJSON_GetObjectItem( record, "sleep_id" ) ) )
+    {
+        ESP_LOGI(TAG, "Could not find required parameter: id");
+        goto Error; 
+    }
+    sleep_id = item->valueint;   
+    if( !( item = cJSON_GetObjectItem( record, "cycle_id" ) ) )
+    {
+        ESP_LOGI(TAG, "Could not find required parameter: id");
+        goto Error; 
+    }
+    cycle_id = item->valueint; 
 
-//     char *score_state = NULL;
-//     GET_REQUIRED_JSON_STR(record, item, "score_state", score_state);
-//     if(strncmp(score_state, "SCORED",7) )
-//     {
-//         ESP_LOGI(TAG, "Recovery score state: %s ", item->valuestring);
-//         recovery->score_state = !strcmp(score_state, "PENDING") ? WHOOP_SCORE_STATE_PENDING : WHOOP_SCORE_STATE_UNSCORABLE;
-//         status = -1;
-//         goto Error;
-//     }
-//     recovery->score_state = WHOOP_SCORE_STATE_SCORED;
-    
-//     GET_REQUIRED_JSON_OBJ(record, score, "score");
-//     ASSIGN_REQUIRED_JSON_INT(score, item, "user_calibrating", recovery->score.user_calibrating);
-//     ASSIGN_REQUIRED_JSON_FLOAT(score, item, "recovery_score", recovery->score.recovery_score);
-//     ASSIGN_REQUIRED_JSON_FLOAT(score, item, "resting_heart_rate", recovery->score.resting_heart_rate);
-//     ASSIGN_REQUIRED_JSON_FLOAT(score, item, "hrv_rmssd_milli", recovery->score.hrv_rmssd_milli);
-//     ASSIGN_OPTIONAL_JSON_FLOAT(score, item, "spo2_percentage", recovery->score.spo2_percentage);
-//     ASSIGN_OPTIONAL_JSON_FLOAT(score, item, "skin_temp_celsius", recovery->score.skin_temp_celsius);
-    
-// Error:
-//     cJSON_Delete(json);
-//     return status;
-// }
+    if( ( status = get_whoop_recovery_handle_by_id(sleep_id, &handle) ) ||  ( status = get_whoop_recovery_handle_by_id(cycle_id, &handle) ) ) 
+    {
+        if( ( status = create_whoop_recovery_data(sleep_id, cycle_id, &handle) ) ) 
+        {
+            ESP_LOGI(TAG, "Could not create recovery.");
+            goto Error;
+        }
+    }
+    else
+    {
+        ESP_LOGI(TAG, "Recovery already recorded.");
+    }
 
-// static int parse_sleep_json_data(const char *json_data, whoop_sleep_data_t *sleep)
-// {
-//     int status = 0;
-//     cJSON *json = cJSON_Parse(json_data);
-//     if(!json)
-//     {
-//         ESP_LOGI(TAG, "Could not parse JSON.");
-//         return -1;
-//     }
+    GET_REQUIRED_JSON_STR(record, item, "score_state", score_state_str);
+    score_state_value = parse_string_to_score_state(score_state_str);
+    set_whoop_data(handle, WHOOP_DATA_OPT_RECOVERY_SCORE_STATE, score_state_value);
+    if(score_state_value != WHOOP_SCORE_STATE_SCORED )
+    {
+        ESP_LOGI(TAG, "Recovery not scored.");
+        goto Error;
+    }
+    
+    GET_REQUIRED_JSON_OBJ(record, score, "score");
+    ASSIGN_REQUIRED_JSON_INT(score, item, "user_calibrating", handle, WHOOP_DATA_OPT_RECOVERY_USER_CALIBRATING);
+    ASSIGN_REQUIRED_JSON_FLOAT(score, item, "recovery_score", handle, WHOOP_DATA_OPT_RECOVERY_RECOVERY_SCORE);
+    ASSIGN_REQUIRED_JSON_FLOAT(score, item, "resting_heart_rate", handle, WHOOP_DATA_OPT_RECOVERY_RESTING_HEART_RATE);
+    ASSIGN_REQUIRED_JSON_FLOAT(score, item, "hrv_rmssd_milli", handle, WHOOP_DATA_OPT_RECOVERY_HRV_RMSSD_MILLI);
+    ASSIGN_OPTIONAL_JSON_FLOAT(score, item, "spo2_percentage", handle, WHOOP_DATA_OPT_RECOVERY_SPO2_PERCENTAGE);
+    ASSIGN_OPTIONAL_JSON_FLOAT(score, item, "skin_temp_celsius", handle, WHOOP_DATA_OPT_RECOVERY_SKIN_TEMP_CELCIUS);
+    
+Error:
+    cJSON_Delete(json);
+    return status;
+}
 
-//     const cJSON *records = NULL;
-//     const cJSON *record = NULL;
-//     const cJSON *score = NULL;
-//     const cJSON *stage_summary = NULL;
-//     const cJSON *sleep_needed = NULL;
-//     const cJSON *item = NULL;
-//     GET_REQUIRED_JSON_OBJ(json, records, "records");
-//     record = cJSON_GetArrayItem(records, 0);
+static int parse_sleep_json_data(const char *json_data)
+{
+    whoop_data_handle_t handle = NULL;
+    whoop_score_state_n score_state_value = 0;
+    char *score_state_str = NULL;
+    int status = 0;
+    const cJSON *records = NULL;
+    const cJSON *record = NULL;
+    const cJSON *score = NULL;
+    const cJSON *item = NULL;
+    const cJSON *sleep_needed = NULL;
+    const cJSON *stage_summary = NULL;
+    cJSON *json = cJSON_Parse(json_data);
+    if(!json)
+    {
+        ESP_LOGI(TAG, "Could not parse JSON.");
+        return -1;
+    }
+    GET_REQUIRED_JSON_OBJ(json, records, "records");
+    record = cJSON_GetArrayItem(records, 0);
 
-//     int record_id = 0;
-//     ASSIGN_REQUIRED_JSON_INT(record, item, "id", record_id);
-//     if( record_id == sleep->id)
-//     {
-//         ESP_LOGI(TAG, "Sleep already recorded or not formatted correctly.");
-//         status = -1;
-//         goto Error;
-//     }
-//     sleep->id = record_id;
-    
-//     ASSIGN_REQUIRED_JSON_INT(record, item, "nap", sleep->nap);
+    if( !( item = cJSON_GetObjectItem( record, "id" ) ) )
+    {   
+        ESP_LOGI(TAG, "Could not find required parameter: id");
+        goto Error; 
+    }
+    else
+    {
+        if( ( status = get_whoop_sleep_handle_by_id(item->valueint, &handle) ) ) 
+        {
+            if( ( status = create_whoop_sleep_data(item->valueint, &handle) ) ) 
+            {
+                ESP_LOGI(TAG, "Could not create sleep.");
+                goto Error;
+            }
+        }
+        else
+        {
+            ESP_LOGI(TAG, "Sleep already recorded.");
+        }
+    }
 
-//     char *score_state = NULL;
-//     GET_REQUIRED_JSON_STR(record, item, "score_state", score_state);
-//     if(strncmp(score_state, "SCORED",7) )
-//     {
-//         ESP_LOGI(TAG, "Sleep score state: %s ", item->valuestring);
-//         sleep->score_state = !strcmp(score_state, "PENDING") ? WHOOP_SCORE_STATE_PENDING : WHOOP_SCORE_STATE_UNSCORABLE;
-//         status = -1;
-//         goto Error;
-//     }
-//     sleep->score_state = WHOOP_SCORE_STATE_SCORED;
+    GET_REQUIRED_JSON_STR(record, item, "score_state", score_state_str);
+    score_state_value = parse_string_to_score_state(score_state_str);
+    set_whoop_data(handle, WHOOP_DATA_OPT_SLEEP_SCORE_STATE, score_state_value);
+    if(score_state_value != WHOOP_SCORE_STATE_SCORED )
+    {
+        ESP_LOGI(TAG, "Sleep not scored.");
+        goto Error;
+    }
+    ASSIGN_REQUIRED_JSON_INT(record, item, "nap", handle, WHOOP_DATA_OPT_SLEEP_NAP_BOOL);
+
+    GET_REQUIRED_JSON_OBJ(record, score, "score");
+    GET_REQUIRED_JSON_OBJ(score, stage_summary, "stage_summary");
+    GET_REQUIRED_JSON_OBJ(score, sleep_needed, "sleep_needed");
+    ASSIGN_REQUIRED_JSON_INT(stage_summary, item, "total_in_bed_time_milli", handle, WHOOP_DATA_OPT_SLEEP_STAGE_SUMMARY_TOTAL_IN_BED_TIME_MILLI);
+    ASSIGN_REQUIRED_JSON_INT(stage_summary, item, "total_awake_time_milli", handle, WHOOP_DATA_OPT_SLEEP_STAGE_SUMMARY_TOTAL_AWAKE_TIME_MILLI);
+    ASSIGN_REQUIRED_JSON_INT(stage_summary, item, "total_no_data_time_milli", handle, WHOOP_DATA_OPT_SLEEP_STAGE_SUMMARY_TOTAL_NO_DATA_TIME_MILLI);
+    ASSIGN_REQUIRED_JSON_INT(stage_summary, item, "total_light_sleep_time_milli", handle, WHOOP_DATA_OPT_SLEEP_STAGE_SUMMARY_TOTAL_LIGHT_SLEEP_TIME_MILLI);
+    ASSIGN_REQUIRED_JSON_INT(stage_summary, item, "total_slow_wave_sleep_time_milli", handle, WHOOP_DATA_OPT_SLEEP_STAGE_SUMMARY_TOTAL_SLOW_WAVE_TIME_MILLI);
+    ASSIGN_REQUIRED_JSON_INT(stage_summary, item, "total_rem_sleep_time_milli", handle, WHOOP_DATA_OPT_SLEEP_STAGE_SUMMARY_TOTAL_REM_SLEEP_TIME_MILLI);
+    ASSIGN_REQUIRED_JSON_INT(stage_summary, item, "sleep_cycle_count", handle, WHOOP_DATA_OPT_SLEEP_STAGE_SUMMARY_SLEEP_CYCLE_COUNT);
+    ASSIGN_REQUIRED_JSON_INT(stage_summary, item, "disturbance_count", handle, WHOOP_DATA_OPT_SLEEP_STAGE_SUMMARY_DISTURBANCE_COUNT);
     
-//     GET_REQUIRED_JSON_OBJ(record, score, "score");
-//     GET_REQUIRED_JSON_OBJ(score, stage_summary, "stage_summary");
-//     GET_REQUIRED_JSON_OBJ(score, sleep_needed, "sleep_needed");
-//     ASSIGN_REQUIRED_JSON_INT(stage_summary, item, "total_in_bed_time_milli", sleep->score.stage_summary.total_in_bed_time_milli);
-//     ASSIGN_REQUIRED_JSON_INT(stage_summary, item, "total_awake_time_milli", sleep->score.stage_summary.total_awake_time_milli);
-//     ASSIGN_REQUIRED_JSON_INT(stage_summary, item, "total_no_data_time_milli", sleep->score.stage_summary.total_no_data_time_milli);
-//     ASSIGN_REQUIRED_JSON_INT(stage_summary, item, "total_light_sleep_time_milli", sleep->score.stage_summary.total_light_sleep_time_milli);
-//     ASSIGN_REQUIRED_JSON_INT(stage_summary, item, "total_slow_wave_sleep_time_milli", sleep->score.stage_summary.total_slow_wave_sleep_time_milli);
-//     ASSIGN_REQUIRED_JSON_INT(stage_summary, item, "total_rem_sleep_time_milli", sleep->score.stage_summary.total_rem_sleep_time_milli);
-//     ASSIGN_REQUIRED_JSON_INT(stage_summary, item, "sleep_cycle_count", sleep->score.stage_summary.sleep_cycle_count);
-//     ASSIGN_REQUIRED_JSON_INT(stage_summary, item, "disturbance_count", sleep->score.stage_summary.disturbance_count);
-    
-//     ASSIGN_REQUIRED_JSON_INT(sleep_needed, item, "baseline_milli", sleep->score.sleep_needed.baseline_milli);
-//     ASSIGN_REQUIRED_JSON_INT(sleep_needed, item, "need_from_sleep_debt_milli", sleep->score.sleep_needed.need_from_sleep_debt_milli);
-//     ASSIGN_REQUIRED_JSON_INT(sleep_needed, item, "need_from_recent_strain_milli", sleep->score.sleep_needed.need_from_recent_strain_milli);
-//     ASSIGN_REQUIRED_JSON_INT(sleep_needed, item, "need_from_recent_nap_milli", sleep->score.sleep_needed.need_from_recent_nap_milli);
+    ASSIGN_REQUIRED_JSON_INT(sleep_needed, item, "baseline_milli", handle, WHOOP_DATA_OPT_SLEEP_SLEEP_NEEDED_BASELINE_MILLI);
+    ASSIGN_REQUIRED_JSON_INT(sleep_needed, item, "need_from_sleep_debt_milli", handle, WHOOP_DATA_OPT_SLEEP_SLEEP_NEEDED_FROM_SLEEP_DEBT_MILLI);
+    ASSIGN_REQUIRED_JSON_INT(sleep_needed, item, "need_from_recent_strain_milli", handle, WHOOP_DATA_OPT_SLEEP_SLEEP_NEEDED_FROM_RECENT_STRAIN_DEBT_MILLI);
+    ASSIGN_REQUIRED_JSON_INT(sleep_needed, item, "need_from_recent_nap_milli", handle, WHOOP_DATA_OPT_SLEEP_SLEEP_NEEDED_FROM_RECENT_NAP_DEBT_MILLI);
     
     
-//     ASSIGN_REQUIRED_JSON_FLOAT(score, item, "respiratory_rate", sleep->score.respiratory_rate);
-//     ASSIGN_REQUIRED_JSON_FLOAT(score, item, "sleep_performance_percentage", sleep->score.sleep_performance_percentage);
-//     ASSIGN_REQUIRED_JSON_FLOAT(score, item, "sleep_consistency_percentage", sleep->score.sleep_consistency_percentage);
-//     ASSIGN_REQUIRED_JSON_FLOAT(score, item, "sleep_efficiency_percentage", sleep->score.sleep_efficiency_percentage);
+    ASSIGN_REQUIRED_JSON_FLOAT(score, item, "respiratory_rate", handle, WHOOP_DATA_OPT_SLEEP_RESPIRATORY_RATE);
+    ASSIGN_REQUIRED_JSON_FLOAT(score, item, "sleep_performance_percentage", handle, WHOOP_DATA_OPT_SLEEP_SLEEP_PERFORMANCE_PERCENTAGE);
+    ASSIGN_REQUIRED_JSON_FLOAT(score, item, "sleep_consistency_percentage", handle, WHOOP_DATA_OPT_SLEEP_SLEEP_CONSISTENCY_PERCENTAGE);
+    ASSIGN_REQUIRED_JSON_FLOAT(score, item, "sleep_efficiency_percentage", handle, WHOOP_DATA_OPT_SLEEP_SLEEP_EFFICIENCY_PERCENTAGE);
     
-// Error:
-//     cJSON_Delete(json);
-//     return status;
-// }
+Error:
+    cJSON_Delete(json);
+    return status;
+}
 
 static int parse_workout_json_data(const char *json_data)
 {
@@ -440,7 +476,7 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
-int perform_https_and_check_error(esp_http_client_handle_t client)
+static int perform_https_and_check_error(esp_http_client_handle_t client)
 {
     esp_err_t err = esp_http_client_perform(client);
     int response_code = 400;
@@ -455,7 +491,7 @@ int perform_https_and_check_error(esp_http_client_handle_t client)
     return response_code;
 }
 
-void handle_whoop_api_response_data(int response_code, whoop_api_request_type_n request, whoop_rest_client_t *data)
+static void handle_whoop_api_response_data(int response_code, whoop_api_request_type_n request, whoop_rest_client_t *data)
 {
     if(response_code != 401 && response_code != 200 ) 
     {
@@ -475,10 +511,10 @@ void handle_whoop_api_response_data(int response_code, whoop_api_request_type_n 
             status = parse_cycle_json_data(data->server_response);
             break;
         case WHOOP_API_REQUEST_TYPE_RECOVERY:
-            //status = parse_recovery_json_data(data->server_response, &data->whoop_data.recovery);
+            status = parse_recovery_json_data(data->server_response);
             break;
         case WHOOP_API_REQUEST_TYPE_SLEEP:
-            //status = parse_sleep_json_data(data->server_response, &data->whoop_data.sleep);
+            status = parse_sleep_json_data(data->server_response);
             break;
         case WHOOP_API_REQUEST_TYPE_WORKOUT:
             status = parse_workout_json_data(data->server_response);
@@ -490,6 +526,7 @@ void handle_whoop_api_response_data(int response_code, whoop_api_request_type_n 
     }
 }
 
+//Public functions
 void whoop_get_data(whoop_api_request_type_n request_type)
 {
     int response_code = 400;
