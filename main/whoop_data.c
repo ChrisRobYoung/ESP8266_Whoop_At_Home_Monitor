@@ -410,7 +410,7 @@ int get_whoop_data(whoop_data_handle_t handle, whoop_data_opt_n whoop_data_opt, 
 void print_whoop_cycle_data(whoop_data_handle_t handle)
 {
     whoop_cycle_data_t *sleep = (whoop_cycle_data_t *) handle;
-    ESP_LOGI(TAG, "sleep ID: %d", sleep->cycle_ints.id);
+    ESP_LOGI(TAG, "Cycle ID: %d", sleep->cycle_ints.id);
     if(sleep->cycle_ints.score_state == WHOOP_SCORE_STATE_SCORED)
     {
         ESP_LOGI(TAG, "\tAverage Heart Rate: %d", sleep->cycle_ints.average_heart_rate);

@@ -192,6 +192,10 @@ esp_err_t auth_cbk_get_handler(httpd_req_t *req)
             if (httpd_query_key_value(buf, "code", param, sizeof(param)) == ESP_OK) {
                 ESP_LOGI(TAG, "Found URL query parameter => param=%s", param);
                 whoop_get_token(param, TOKEN_REQUEST_TYPE_AUTH_CODE);
+                whoop_get_data(WHOOP_API_REQUEST_TYPE_CYCLE);
+                whoop_get_data(WHOOP_API_REQUEST_TYPE_RECOVERY);
+                whoop_get_data(WHOOP_API_REQUEST_TYPE_SLEEP);
+                whoop_get_data(WHOOP_API_REQUEST_TYPE_WORKOUT);
             }
             if (httpd_query_key_value(buf, "state", param, sizeof(param)) == ESP_OK) {
                 ESP_LOGI(TAG, "Found URL query parameter => state=%s", param);

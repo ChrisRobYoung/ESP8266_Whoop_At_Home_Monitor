@@ -601,7 +601,10 @@ void whoop_get_token(const char *code_or_token, int token_request_type)
     esp_http_client_set_post_field(client, post_data, strlen(post_data));
 
     response_code = perform_https_and_check_error(client);
-    if(response_code == 200) parse_token_json_response(&g_whoop_rest_client);
+    if(response_code == 200)
+    {
+        parse_token_json_response(&g_whoop_rest_client);
+    }
 
     if(g_whoop_rest_client.server_response)
     {
