@@ -50,7 +50,6 @@ typedef struct whoop_rest_client
     char access_token[128];
     int expires_in;
     char refresh_token[128];
-    whoop_data_t whoop_data;
 } whoop_rest_client_t;
 
 whoop_rest_client_t g_whoop_rest_client = {0};
