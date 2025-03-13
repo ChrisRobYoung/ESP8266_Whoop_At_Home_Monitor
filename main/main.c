@@ -21,6 +21,7 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 #include <esp_http_server.h>
+#include "whoop_data.h"
 
 #include "whoop_client.h"
 
@@ -285,8 +286,23 @@ httpd_uri_t whoop_cycle_cbk = {
 
 esp_err_t whoop_print_get_handler(httpd_req_t *req)
 {
-    /* Set some custom headers */
-    print_whoop_data();
+    whoop_data_handle_t handle = NULL;
+    if(!get_whoop_cycle_handle_by_id(0, &handle))
+    {
+        print_whoop_cycle_data(handle);
+    }
+    else
+    {
+        ESP_LOGI(TAG, "No cycle data recorded yet");
+    }
+    if(!get_whoop_workout_handle_by_id(0, &handle))
+    {
+        print_whoop_workout_data(handle);
+    }
+    else
+    {
+        ESP_LOGI(TAG, "No workout data recorded yet");
+    }
     httpd_resp_set_hdr(req, "User", "ESP8266");
     httpd_resp_send(req, NULL, 0);
 
@@ -365,7 +381,7 @@ void app_main()
     initialise_mdns();
 
     ESP_ERROR_CHECK(example_connect());
-
+    init_whoop_data();
     init_whoop_tls_client();
     
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &connect_handler, &server));

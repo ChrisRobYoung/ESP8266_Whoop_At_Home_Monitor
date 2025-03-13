@@ -14,12 +14,12 @@ enum token_request_type {
     TOKEN_REQUEST_TYPE_REFRESH = 1
 };
 
-typedef enum whoop_score_state
-{
-    WHOOP_SCORE_STATE_SCORED,
-    WHOOP_SCORE_STATE_PENDING,
-    WHOOP_SCORE_STATE_UNSCORABLE
-} whoop_score_state_n;
+// typedef enum whoop_score_state
+// {
+//     WHOOP_SCORE_STATE_SCORED,
+//     WHOOP_SCORE_STATE_PENDING,
+//     WHOOP_SCORE_STATE_UNSCORABLE
+// } whoop_score_state_n;
 
 typedef struct whoop_recovery_score{
     int user_calibrating;
@@ -33,23 +33,23 @@ typedef struct whoop_recovery_score{
 typedef struct whoop_recovery_data {
     int cycle_id;
     int sleep_id;
-    whoop_score_state_n score_state;
+    int score_state;
     whoop_recover_score_t score;
 } whoop_recovery_data_t;
 
-typedef struct whoop_cycle_score
-{
-    float strain;
-    float kilojoule;
-    int average_heart_rate;
-    int max_heart_rate;
-} whoop_cycle_score_t;
+// typedef struct whoop_cycle_score
+// {
+//     float strain;
+//     float kilojoule;
+//     int average_heart_rate;
+//     int max_heart_rate;
+// } whoop_cycle_score_t;
 
-typedef struct whoop_cycle_data {
-    int id;
-    whoop_score_state_n score_state;
-    whoop_cycle_score_t score;
-} whoop_cycle_data_t;
+// typedef struct whoop_cycle_data {
+//     int id;
+//     whoop_score_state_n score_state;
+//     whoop_cycle_score_t score;
+// } whoop_cycle_data_t;
 
 typedef struct whoop_workout_score_zone_duration{
     int zone_zero_to_five_time_milli[6];
@@ -70,7 +70,7 @@ typedef struct whoop_workout_score{
 typedef struct whoop_workout_data {
     int id;
     int sport_id;
-    whoop_score_state_n score_state;
+    int score_state;
     whoop_workout_score_t score;
 } whoop_workout_data_t;
 
@@ -104,18 +104,18 @@ typedef struct whoop_sleep_score{
 typedef struct whoop_sleep_data {
     int id;
     int nap;
-    whoop_score_state_n score_state;
+    int score_state;
     whoop_sleep_score_t score;
 } whoop_sleep_data_t;
 
 typedef struct whoop_data {
     whoop_recovery_data_t recovery;
     whoop_sleep_data_t sleep;
-    whoop_cycle_data_t cycle;
+    //whoop_cycle_data_t cycle;
     whoop_workout_data_t workout;
 } whoop_data_t;
 
-void print_whoop_data(void);
+//void print_whoop_data_old(void);
 void whoop_get_token(const char *code_or_token, int token_request_type);
 void whoop_get_data(whoop_api_request_type_n request_type);
 void init_whoop_tls_client(void);

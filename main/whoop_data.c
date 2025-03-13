@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdarg.h>
+#include "esp_log.h"
 #include "whoop_data.h"
 
 // Defines
@@ -10,6 +11,7 @@
 #define WHOOP_WORKOUT_BIT_ID  0x0004
 #define WHOOP_RECOVERY_BIT_ID  0x0008
 
+#define MIN(data_1, data_2) ( ( (data_1) < (data_2) ) ? (data_1) : (data_2) ) 
 // Types 
 typedef struct whoop_recovery_ints
 {
@@ -108,17 +110,15 @@ typedef struct whoop_sleep_data {
 } whoop_sleep_data_t;
 
 typedef struct whoop_data {
-    int n_cycle_data_recorded;
     whoop_cycle_data_t **cycle_list;
-    int n_workout_data_recorded;
     whoop_workout_data_t **workout_list;
-    int n_recovery_data_recorded;
     whoop_recovery_data_t **recovery_list;
-    int n_sleep_data_recorded;
     whoop_sleep_data_t **sleep_list;
 } whoop_data_t;
 
 // Local Global Variables
+static const char *TAG = "WHOOP DATA";
+
 whoop_sleep_data_t g_sleep_data_list[MAX_NUMBER_RECORDINGS];
 whoop_cycle_data_t g_cycle_data_list[MAX_NUMBER_RECORDINGS];
 whoop_workout_data_t g_workout_data_list[MAX_NUMBER_RECORDINGS];
@@ -159,57 +159,61 @@ void discard_recovery_data(whoop_recovery_data_t *recovery_data)
 {
 
 }
+
 int deconstruct_whoop_data_opt(whoop_data_handle_t handle, whoop_data_opt_n whoop_data_opt, int **int_array_out, float **float_array_out, int *data_is_int_bool_out, int *data_offset_out)
 {
-    switch( (whoop_data_opt & 0xf000) >> 8)
+    whoop_sleep_data_t *sleep_data = NULL;
+    whoop_cycle_data_t *cycle_data = NULL;
+    whoop_recovery_data_t *recovery_data = NULL;
+    whoop_workout_data_t *workout_data = NULL;
+    //ESP_LOGI(TAG, "Assiging data opt: %x", whoop_data_opt);
+    switch( (whoop_data_opt & 0xf000) >> 12)
     {
         case WHOOP_SLEEP_BIT_ID:
-            whoop_sleep_data_t *sleep_data = (whoop_sleep_data_t *) handle;
+            sleep_data = (whoop_sleep_data_t *) handle;
             *int_array_out = &sleep_data->sleep_ints.id;
             *float_array_out = &sleep_data->sleep_floats.respiratory_rate;
+            //ESP_LOGI(TAG, "Data opt sleep data.");
             break;
         case WHOOP_CYCLE_BIT_ID:
-            whoop_cycle_data_t *cycle_data = (whoop_cycle_data_t *) handle;
+            cycle_data = (whoop_cycle_data_t *) handle;
             *int_array_out = &cycle_data->cycle_ints.id;
             *float_array_out = &cycle_data->cycle_floats.strain;    
+            //ESP_LOGI(TAG, "Data opt is cycle data.");
             break;
         case WHOOP_RECOVERY_BIT_ID:
-            whoop_recovery_data_t *recovery_data = (whoop_recovery_data_t *) handle;
+            recovery_data = (whoop_recovery_data_t *) handle;
             *int_array_out = &recovery_data->recovery_ints.cycle_id;
-            *float_array_out = &recovery_data->recovery_floats.recovery_score;    
+            *float_array_out = &recovery_data->recovery_floats.recovery_score;  
+            //ESP_LOGI(TAG, "Data opt is recovery data.");  
             break;
         case WHOOP_WORKOUT_BIT_ID:
-            whoop_workout_data_t *workout_data = (whoop_workout_data_t *) handle;
+            workout_data = (whoop_workout_data_t *) handle;
             *int_array_out = &workout_data->workout_ints.id;
             *float_array_out = &workout_data->workout_floats.strain;    
+            //ESP_LOGI(TAG, "Data opt is workout data.");
             break;
         default:
             return WHOOP_DATA_STATUS_INVALID_OPTION;
     }
 
-    *data_is_int_bool_out = (whoop_data_opt &0x0100) ? 1 : 0;
+    *data_is_int_bool_out = (whoop_data_opt & 0x0100) ? 0 : 1;
     *data_offset_out = whoop_data_opt & 0x00ff;
-    
+    //ESP_LOGI(TAG, "Data opt integer bool: %d", *data_is_int_bool_out);
+    //ESP_LOGI(TAG, "Data offset value: %d", *data_offset_out);
     return WHOOP_DATA_STATUS_OK;
 }
 
 // Global functions
 int init_whoop_data(void)
 {
-    memset(g_sleep_data_ptr_list, 0, sizeof(whoop_sleep_data_t *) *MAX_NUMBER_RECORDINGS);
-    memset(g_cycle_data_ptr_list, 0, sizeof(whoop_cycle_data_t *) * MAX_NUMBER_RECORDINGS);
-    memset(g_workout_data_ptr_list, 0, sizeof(whoop_workout_data_t *) * MAX_NUMBER_RECORDINGS);
-    memset(g_recovery_data_ptr_list, 0, sizeof(whoop_recovery_data_t *) * MAX_NUMBER_RECORDINGS);
-
-    memset(g_sleep_data_list, 0, sizeof(whoop_sleep_data_t) *MAX_NUMBER_RECORDINGS);
-    memset(g_cycle_data_list, 0, sizeof(whoop_cycle_data_t) * MAX_NUMBER_RECORDINGS);
-    memset(g_workout_data_list, 0, sizeof(whoop_workout_data_t) * MAX_NUMBER_RECORDINGS);
-    memset(g_recovery_data_list, 0, sizeof(whoop_recovery_data_t) * MAX_NUMBER_RECORDINGS);
-
-    g_whoop_data.n_cycle_data_recorded = 0;
-    g_whoop_data.n_recovery_data_recorded = 0;
-    g_whoop_data.n_sleep_data_recorded = 0;
-    g_whoop_data.n_workout_data_recorded = 0;
+    for(int index = 0; index < MAX_NUMBER_RECORDINGS; index++)
+    {
+        g_sleep_data_ptr_list[index] =  &g_sleep_data_list[index];
+        g_cycle_data_ptr_list[index] = &g_cycle_data_list[index];
+        g_workout_data_ptr_list[index] = &g_workout_data_list[index];
+        g_recovery_data_ptr_list[index] = &g_recovery_data_list[index];
+    }
     g_whoop_data.recovery_list = g_recovery_data_ptr_list;
     g_whoop_data.sleep_list = g_sleep_data_ptr_list;
     g_whoop_data.cycle_list = g_cycle_data_ptr_list;
@@ -219,24 +223,25 @@ int init_whoop_data(void)
 int discard_whoop_data(void)
 {   
     int index;
-    for(index = 0; index <g_whoop_data.n_cycle_data_recorded; index++)  discard_cycle_data(g_whoop_data.cycle_list[index]);
-    for(index = 0; index <g_whoop_data.n_recovery_data_recorded; index++)  discard_recovery_data(g_whoop_data.recovery_list[index]);    
-    for(index = 0; index <g_whoop_data.n_sleep_data_recorded; index++)  discard_sleep_data(g_whoop_data.sleep_list[index]);    
-    for(index = 0; index <g_whoop_data.n_workout_data_recorded; index++)  discard_workout_data(g_whoop_data.workout_list[index]); 
+    for(index = 0; index < MAX_NUMBER_RECORDINGS; index++)  discard_cycle_data(g_whoop_data.cycle_list[index]);
+    for(index = 0; index < MAX_NUMBER_RECORDINGS; index++)  discard_recovery_data(g_whoop_data.recovery_list[index]);    
+    for(index = 0; index < MAX_NUMBER_RECORDINGS; index++)  discard_sleep_data(g_whoop_data.sleep_list[index]);    
+    for(index = 0; index < MAX_NUMBER_RECORDINGS; index++)  discard_workout_data(g_whoop_data.workout_list[index]); 
     return WHOOP_DATA_STATUS_OK;      
 }
 
 /*Sleep ID or 0 for most recent*/
 int get_whoop_sleep_handle_by_id(int id, whoop_data_handle_t *handle)
 {
-    if(g_whoop_data.n_sleep_data_recorded == 0)
+    if(g_most_recent_sleep == NULL)
         return WHOOP_DATA_STATUS_NO_RECORDINGS;
     if(id == 0)
     {
         *handle = g_most_recent_sleep;
         return WHOOP_DATA_STATUS_OK;
     }
-    for(int index = 0; index < g_whoop_data.n_sleep_data_recorded; index++)
+    int count = MIN(g_sleep_data_record_count, MAX_NUMBER_RECORDINGS);
+    for(int index = 0; index < count; index++)
     {
         if(g_whoop_data.sleep_list[index]->sleep_ints.id == id)
         {
@@ -261,14 +266,15 @@ int create_whoop_sleep_data(int id, whoop_data_handle_t *handle)
 /*Cycle ID or 0 for most recent*/
 int get_whoop_cycle_handle_by_id(int id, whoop_data_handle_t *handle)
 {
-    if(g_whoop_data.n_cycle_data_recorded == 0)
+    if(g_most_recent_cycle == NULL)
         return WHOOP_DATA_STATUS_NO_RECORDINGS;
     if(id == 0)
     {
         *handle = g_most_recent_cycle;
         return WHOOP_DATA_STATUS_OK;
     }
-    for(int index = 0; index < g_whoop_data.n_cycle_data_recorded; index++)
+    int count = MIN(g_cycle_data_record_count, MAX_NUMBER_RECORDINGS);
+    for(int index = 0; index < count; index++)
     {
         if(g_whoop_data.cycle_list[index]->cycle_ints.id == id)
         {
@@ -280,7 +286,7 @@ int get_whoop_cycle_handle_by_id(int id, whoop_data_handle_t *handle)
 }
 int create_whoop_cycle_data(int id, whoop_data_handle_t *handle)
 {
-    whoop_cycle_data_t *cycle_to_write = g_whoop_data.sleep_list[g_cycle_data_record_count % MAX_NUMBER_RECORDINGS];
+    whoop_cycle_data_t *cycle_to_write = g_whoop_data.cycle_list[g_cycle_data_record_count % MAX_NUMBER_RECORDINGS];
     memset( cycle_to_write, 0, sizeof(whoop_cycle_data_t) );
     cycle_to_write->cycle_ints.id = id;
     g_cycle_data_record_count++;
@@ -292,14 +298,15 @@ int create_whoop_cycle_data(int id, whoop_data_handle_t *handle)
 /*Workout ID or 0 for most recent*/
 int get_whoop_workout_handle_by_id(int id, whoop_data_handle_t *handle)
 {
-    if(g_whoop_data.n_workout_data_recorded == 0)
+    if(g_most_recent_workout == NULL)
         return WHOOP_DATA_STATUS_NO_RECORDINGS;
     if(id == 0)
     {
         *handle = g_most_recent_workout;
         return WHOOP_DATA_STATUS_OK;
     }
-    for(int index = 0; index < g_whoop_data.n_workout_data_recorded; index++)
+    int count = MIN(g_workout_data_record_count, MAX_NUMBER_RECORDINGS);
+    for(int index = 0; index < count; index++)
     {
         if(g_whoop_data.workout_list[index]->workout_ints.id == id)
         {
@@ -323,14 +330,15 @@ int create_whoop_workout_data(int id, whoop_data_handle_t *handle)
 /*ID can be either sleep or cycle id related to recovery or 0 for most recent*/
 int get_whoop_recovery_handle_by_id(int id, whoop_data_handle_t *handle)
 {
-    if(g_whoop_data.n_recovery_data_recorded == 0)
+    if(g_most_recent_recovery == NULL)
         return WHOOP_DATA_STATUS_NO_RECORDINGS;
     if(id == 0)
     {
         *handle = g_most_recent_recovery;
         return WHOOP_DATA_STATUS_OK;
     }
-    for(int index = 0; index < g_whoop_data.n_recovery_data_recorded; index++)
+    int count = MIN(g_recovery_data_record_count, MAX_NUMBER_RECORDINGS);
+    for(int index = 0; index < count; index++)
     {
         if(g_whoop_data.recovery_list[index]->recovery_ints.sleep_id == id 
             || g_whoop_data.recovery_list[index]->recovery_ints.cycle_id == id)
@@ -361,10 +369,12 @@ int set_whoop_data(whoop_data_handle_t handle, whoop_data_opt_n whoop_data_opt, 
     int data_is_int = 0;
     int data_array_offset = 0;
     if(deconstruct_whoop_data_opt(handle, whoop_data_opt, &int_array_ptr, &float_array_ptr, &data_is_int, &data_array_offset))
+    {
+        ESP_LOGI(TAG, "Invalid Data Option: %x ", whoop_data_opt);
         return WHOOP_DATA_STATUS_INVALID_OPTION;
-    
+    }
     va_list argptr;
-    va_start (argptr, 1);
+    va_start (argptr, whoop_data_opt);
 
     if(data_is_int)
     {
@@ -373,7 +383,7 @@ int set_whoop_data(whoop_data_handle_t handle, whoop_data_opt_n whoop_data_opt, 
     }
     else
     {
-        float data_value = va_arg(argptr, float); 
+        float data_value = (float) va_arg(argptr, double); 
         *(float_array_ptr + data_array_offset) = data_value;
     }
     va_end (argptr);
@@ -395,4 +405,52 @@ int get_whoop_data(whoop_data_handle_t handle, whoop_data_opt_n whoop_data_opt, 
         *( (float *) data_out ) = *(float_array_ptr + data_array_offset);
 
     return WHOOP_DATA_STATUS_OK;
+}
+
+void print_whoop_data_all(void)
+{
+
+}
+
+void print_whoop_cycle_data(whoop_data_handle_t handle)
+{
+    whoop_cycle_data_t *cycle = (whoop_cycle_data_t *) handle;
+    ESP_LOGI(TAG, "Cycle ID: %d", cycle->cycle_ints.id);
+    if(cycle->cycle_ints.score_state == WHOOP_SCORE_STATE_SCORED)
+    {
+        ESP_LOGI(TAG, "\tAverage Heart Rate: %d", cycle->cycle_ints.average_heart_rate);
+        ESP_LOGI(TAG, "\tMax Heart Rate: %d", cycle->cycle_ints.max_heart_rate);
+        ESP_LOGI(TAG, "\tStrain: %.2f", cycle->cycle_floats.strain);
+        ESP_LOGI(TAG, "\tKilojoule: %.2f", cycle->cycle_floats.kilojoule);
+    }
+    else
+    {
+        ESP_LOGI(TAG, "\tCycle not scored.");
+    }
+}
+
+void print_whoop_workout_data(whoop_data_handle_t handle)
+{
+    whoop_workout_data_t *workout = (whoop_workout_data_t *) handle;
+    ESP_LOGI(TAG, "Workout ID: %d", workout->workout_ints.id);
+    ESP_LOGI(TAG, "\tSport ID: %d", workout->workout_ints.sport_id);
+    if(workout->workout_ints.score_state == WHOOP_SCORE_STATE_SCORED)
+    {
+        ESP_LOGI(TAG, "\tAverage Heart Rate: %d", workout->workout_ints.average_heart_rate);
+        ESP_LOGI(TAG, "\tMax Heart Rate: %d", workout->workout_ints.max_heart_rate);
+        for(int zone = 0; zone < 6; zone++)
+        {
+            ESP_LOGI(TAG, "\tTime in zone %d [ms]: %d", zone, workout->workout_ints.zone_zero_to_five_time_milli[zone]);
+        }
+        ESP_LOGI(TAG, "\tStrain: %.2f", workout->workout_floats.strain);
+        ESP_LOGI(TAG, "\tKilojoule: %.2f", workout->workout_floats.kilojoule);
+        ESP_LOGI(TAG, "\tPercent Recorded: %.2f", workout->workout_floats.percent_recorded);
+        ESP_LOGI(TAG, "\tDistance Meter: %.2f", workout->workout_floats.distance_meter);
+        ESP_LOGI(TAG, "\tAltitude Gain Meter: %.2f", workout->workout_floats.altitude_gain_meter);
+        ESP_LOGI(TAG, "\tAltitude Change Meter: %.2f", workout->workout_floats.altitude_change_meter);
+    }
+    else
+    {
+        ESP_LOGI(TAG, "\tCycle not scored.");
+    }
 }

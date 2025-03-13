@@ -103,5 +103,8 @@ int create_whoop_recovery_data(int sleep_id, int cycle_id, whoop_data_handle_t *
 int set_whoop_data(whoop_data_handle_t handle, whoop_data_opt_n whoop_data_opt, ...);
 int get_whoop_data(whoop_data_handle_t handle, whoop_data_opt_n whoop_data_opt, void *data_out);
 
+void print_whoop_cycle_data(whoop_data_handle_t handle);
+void print_whoop_workout_data(whoop_data_handle_t handle);
+void print_whoop_data_all(void);
 
 #endif //_WHOOP_DATA_H_
