@@ -398,7 +398,7 @@ int get_whoop_data(whoop_data_handle_t handle, whoop_data_opt_n whoop_data_opt, 
     int data_array_offset = 0;
     if(deconstruct_whoop_data_opt(handle, whoop_data_opt, &int_array_ptr, &float_array_ptr, &data_is_int, &data_array_offset))
         return WHOOP_DATA_STATUS_INVALID_OPTION;
-
+  
     if(data_is_int)
         *( (int *) data_out ) = *(int_array_ptr + data_array_offset);
     else
