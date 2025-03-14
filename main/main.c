@@ -10,6 +10,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/timers.h"
 #include "freertos/event_groups.h"
 #include "esp_system.h"
 #include "esp_log.h"
@@ -430,14 +431,5 @@ void app_main()
     
     //Start task loop
     task_timer_handle = xTimerCreate("Timer", pdMS_TO_TICKS(100) , pdTRUE,( void * ) 0,vTimerCallback);
-    if( task_timer_handle && xTimerStart( task_timer_handle, 0 ) == pdPASS )
-    {
-        ESP_LOGI(TAG, "Starting task scheduler.");
-        vTaskStartScheduler();
-    }
-    else
-    {
-        ESP_LOGI(TAG, "Could not start task scheduler.");
-    }
-    
+    xTimerStart( task_timer_handle, 0 );
 }
