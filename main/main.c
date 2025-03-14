@@ -21,9 +21,14 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 #include <esp_http_server.h>
-#include "whoop_data.h"
 
+#include "whoop_data.h"
 #include "whoop_client.h"
+#include "gpio_manager.h"
+
+//Timer information
+TimerHandle_t task_timer_handle;
+static int g_last_button_state = 0;
 
 #define MDNS_HOSTNAME "esp8266-whoop-api"
 #define AUTH_ENDPOINT_CBK "/authenticate/callback"
@@ -390,6 +395,17 @@ static void connect_handler(void* arg, esp_event_base_t event_base,
     }
 }
 
+ void vTimerCallback( TimerHandle_t xTimer )
+ {
+    int button_state = 0;
+    get_touch_button_state(&button_state);
+    if(button_state != g_last_button_state)
+    {
+        g_last_button_state = button_state;
+        ESP_LOGI(TAG, "Button press occured!");
+        set_rgb_led_value(255 * button_state, 255 * (!button_state), 127 * button_state);
+    }
+ }
 
 
 void app_main()
@@ -404,9 +420,24 @@ void app_main()
     init_whoop_data();
     init_whoop_tls_client();
     
+    initialize_gpio();
+    get_touch_button_state(&g_last_button_state);
+
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &connect_handler, &server));
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &disconnect_handler, &server));
 
     server = start_webserver();
+    
+    //Start task loop
+    task_timer_handle = xTimerCreate("Timer", pdMS_TO_TICKS(100) , pdTRUE,( void * ) 0,vTimerCallback);
+    if( task_timer_handle && xTimerStart( task_timer_handle, 0 ) == pdPASS )
+    {
+        ESP_LOGI(TAG, "Starting task scheduler.");
+        vTaskStartScheduler();
+    }
+    else
+    {
+        ESP_LOGI(TAG, "Could not start task scheduler.");
+    }
     
 }
