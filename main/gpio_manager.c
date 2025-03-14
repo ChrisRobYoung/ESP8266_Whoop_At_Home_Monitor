@@ -13,6 +13,7 @@
 #define PWM_BLUE_OUT_IO_NUM   15
 #define PWM_PERIOD    (1000)
 
+#define BUTTON_PIN  GPIO_Pin_5
 // Local Variables
 const uint32_t pin_num[3] = 
 {
@@ -27,6 +28,15 @@ uint32_t duties[3] =
 float phase[3] = 
 {
     0, 0, 0
+};
+
+gpio_config_t button_io_conf = 
+{
+    BUTTON_PIN,
+    GPIO_MODE_INPUT,
+    GPIO_PULLUP_DISABLE,
+    GPIO_PULLDOWN_ENABLE,
+    GPIO_INTR_DISABLE
 };
 
 static const char *TAG = "GPIO_MANAGER";
@@ -48,9 +58,13 @@ void initialize_gpio(void)
     pwm_init(PWM_PERIOD, duties, 3, pin_num);
     pwm_set_phases(phase);
     pwm_start();
+
+    //Button IO
+    gpio_config(&button_io_conf);
 }
 int get_touch_button_state(int *on_or_off_out)
 {
+    *on_or_off_out = gpio_get_level(BUTTON_PIN);
     return 0;
 }
 int set_rgb_led_value(int r, int g, int b)
