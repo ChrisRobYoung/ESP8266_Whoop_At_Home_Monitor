@@ -394,7 +394,9 @@ static void parse_token_json_response(whoop_rest_client_t *whoop_rest_client)
     if(json)
     {
         strcpy(whoop_rest_client->access_token, cJSON_GetStringValue(cJSON_GetObjectItem(json, "access_token")));
+        ESP_LOGI(TAG, "Access token: %s", whoop_rest_client->access_token);
         strcpy(whoop_rest_client->refresh_token, cJSON_GetStringValue(cJSON_GetObjectItem(json, "refresh_token")));
+        ESP_LOGI(TAG, "Refresh token: %s", whoop_rest_client->refresh_token);
         const cJSON *expires = cJSON_GetObjectItem(json, "expires_in");
         if(expires)
             whoop_rest_client->expires_in = (int) expires->valuedouble;
@@ -574,7 +576,7 @@ void whoop_get_token(const char *code_or_token, int token_request_type)
     char *loc = NULL;
     if(token_request_type == TOKEN_REQUEST_TYPE_REFRESH)
     {
-        strcpy(post_data, "grant_type=refresh_token&client_id=" CLIENT_ID "&client_secret=" CLIENT_SECRET "&code=");
+        strcpy(post_data, "grant_type=refresh_token&client_id=" CLIENT_ID "&client_secret=" CLIENT_SECRET "&refresh_token=");
         loc = post_data + strlen(post_data);
         strcpy(loc, code_or_token);
         ESP_LOGI(TAG, "Sending https post string: %s",post_data);
@@ -583,7 +585,7 @@ void whoop_get_token(const char *code_or_token, int token_request_type)
     
     else if (token_request_type == TOKEN_REQUEST_TYPE_AUTH_CODE)
     {
-        strcpy(post_data, "grant_type=authorization_code&client_id=" CLIENT_ID "&client_secret=" CLIENT_SECRET "&redirect_uri=http://localhost:3100&code=");
+        strcpy(post_data, "grant_type=authorization_code&client_id=" CLIENT_ID "&client_secret=" CLIENT_SECRET "&scope=offline&redirect_uri=http://localhost:3100&code=");
         loc = post_data + strlen(post_data);
         strcpy(loc, code_or_token);
         ESP_LOGI(TAG, "Sending https post string: %s",post_data);

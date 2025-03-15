@@ -8,7 +8,7 @@
 #include "driver/gpio.h"
 
 // Types and Definitions
-#define PWM_RED_OUT_IO_NUM   0
+#define PWM_RED_OUT_IO_NUM   4
 #define PWM_GREEN_OUT_IO_NUM   12
 #define PWM_BLUE_OUT_IO_NUM   15
 #define PWM_PERIOD    (1000)

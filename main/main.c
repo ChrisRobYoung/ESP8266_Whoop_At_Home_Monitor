@@ -198,10 +198,10 @@ esp_err_t auth_cbk_get_handler(httpd_req_t *req)
             if (httpd_query_key_value(buf, "code", param, sizeof(param)) == ESP_OK) {
                 ESP_LOGI(TAG, "Found URL query parameter => param=%s", param);
                 whoop_get_token(param, TOKEN_REQUEST_TYPE_AUTH_CODE);
-                whoop_get_data(WHOOP_API_REQUEST_TYPE_CYCLE);
-                whoop_get_data(WHOOP_API_REQUEST_TYPE_RECOVERY);
-                whoop_get_data(WHOOP_API_REQUEST_TYPE_SLEEP);
-                whoop_get_data(WHOOP_API_REQUEST_TYPE_WORKOUT);
+                //whoop_get_data(WHOOP_API_REQUEST_TYPE_CYCLE);
+                //whoop_get_data(WHOOP_API_REQUEST_TYPE_RECOVERY);
+                //whoop_get_data(WHOOP_API_REQUEST_TYPE_SLEEP);
+                //whoop_get_data(WHOOP_API_REQUEST_TYPE_WORKOUT);
             }
             if (httpd_query_key_value(buf, "state", param, sizeof(param)) == ESP_OK) {
                 ESP_LOGI(TAG, "Found URL query parameter => state=%s", param);
@@ -342,6 +342,39 @@ httpd_uri_t whoop_print_cbk = {
     .user_ctx  = NULL
 };
 
+esp_err_t refresh_token_cbk_get_handler(httpd_req_t *req)
+{
+    char*  buf;
+    size_t buf_len;
+    /* Set some custom headers */
+    buf_len = httpd_req_get_url_query_len(req) + 1;
+    if (buf_len > 1) {
+        buf = malloc(buf_len);
+        if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
+            ESP_LOGI(TAG, "Found URL query => %s", buf);
+            char param[254];
+            /* Get value of expected key from query string */
+            if (httpd_query_key_value(buf, "token", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => token=%s", param);
+                whoop_get_token(param, TOKEN_REQUEST_TYPE_REFRESH);
+            }
+        }
+        free(buf);
+    }
+
+    const char *req_response = "Recieved refresh token.";
+    httpd_resp_send(req, req_response, strlen(req_response));
+
+    return ESP_OK;
+}
+
+httpd_uri_t refresh_cbk = {
+    .uri       = "/refresh_token",
+    .method    = HTTP_GET,
+    .handler   = refresh_token_cbk_get_handler,
+    .user_ctx  = NULL
+};
+
 httpd_handle_t start_webserver(void)
 {
     httpd_handle_t server = NULL;
@@ -359,6 +392,7 @@ httpd_handle_t start_webserver(void)
         httpd_register_uri_handler(server, &whoop_sleep_cbk);
         httpd_register_uri_handler(server, &whoop_workout_cbk);
         httpd_register_uri_handler(server, &whoop_print_cbk);
+        httpd_register_uri_handler(server, &refresh_cbk);
         return server;
     }
 
@@ -396,15 +430,137 @@ static void connect_handler(void* arg, esp_event_base_t event_base,
     }
 }
 
+static void recovery_to_led(float recovery_score)
+{
+    int r = 0;
+    int g = 0;
+    int b = 0;
+    if(recovery_score > 67.0)
+    {
+        g = 255;
+    }
+    else if (recovery_score > 34.0)
+    {
+        r = 255;
+        g = 255;
+    }
+    else
+    {
+        r = 255;
+    }
+    set_rgb_led_value(r, g, b);
+}
+
+static void strain_to_led(float strain)
+{
+    int r = 0;
+    int g = 0;
+    int b = 0;
+    if(strain < 10.0)
+    {
+        g = 255;
+    }
+    else if (strain < 14.0)
+    {
+        r = 255;
+        g = 255;
+    }
+    else if (strain < 19.0)
+    {
+        r = 255;
+        g = 127;
+    }
+    else
+    {
+        r = 255;
+    }
+    set_rgb_led_value(r, g, b);
+}
+
+static void sleep_percentage_to_led(float sleep_percentage)
+{
+    int r = 0;
+    int g = 0;
+    int b = 0;
+    if(sleep_percentage > 90.0)
+    {
+        g = 255;
+    }
+    else if (sleep_percentage > 70.0)
+    {
+        r = 255;
+        g = 255;
+    }
+    else
+    {
+        r = 255;
+    }
+    set_rgb_led_value(r, g, b);
+}
+
+typedef enum current_data_selection
+{
+    DATA_SELECTION_RECOVERY,
+    DATA_SELECTION_SLEEP,
+    DATA_SELECTION_CYCLE,
+    DATA_SELECTION_WORKOUT
+} current_data_selection_t;
+
+current_data_selection_t g_data_selection = DATA_SELECTION_WORKOUT;
+char *data_selection_text[] = {"Selected recovery", "Selected Sleep", "Selected Cycle", "Selected Workout"};
  void vTimerCallback( TimerHandle_t xTimer )
  {
     int button_state = 0;
+    float data_float = 0.0;
+    whoop_data_handle_t handle = NULL;
     get_touch_button_state(&button_state);
+    int data_selection = g_data_selection;
     if(button_state != g_last_button_state)
     {
         g_last_button_state = button_state;
-        ESP_LOGI(TAG, "Button press occured!");
-        set_rgb_led_value(255 * button_state, 255 * (!button_state), 127 * button_state);
+        for(int i =1; i <= 4; i++)
+        {
+            data_selection = (g_data_selection + i) % 4;
+            switch(data_selection)
+            {
+                case DATA_SELECTION_RECOVERY:
+                    get_whoop_recovery_handle_by_id(0, &handle);
+                    break;
+                case DATA_SELECTION_SLEEP:
+                    get_whoop_sleep_handle_by_id(0, &handle);
+                    break;
+                case DATA_SELECTION_CYCLE:
+                    get_whoop_cycle_handle_by_id(0, &handle);
+                    break;
+                case DATA_SELECTION_WORKOUT:
+                    get_whoop_workout_handle_by_id(0, &handle);
+                    break;
+            }
+            if(handle) break;
+        }
+        g_data_selection = data_selection;
+        ESP_LOGI(TAG, data_selection_text[g_data_selection]);
+        
+        if(!handle) return;
+        switch(data_selection)
+        {
+            case DATA_SELECTION_RECOVERY:
+                get_whoop_data(handle, WHOOP_DATA_OPT_RECOVERY_RECOVERY_SCORE, &data_float);
+                recovery_to_led(data_float);
+                break;
+            case DATA_SELECTION_SLEEP:
+                get_whoop_data(handle, WHOOP_DATA_OPT_SLEEP_SLEEP_PERFORMANCE_PERCENTAGE, &data_float);
+                sleep_percentage_to_led(data_float);
+                break;
+            case DATA_SELECTION_CYCLE:
+                get_whoop_data(handle, WHOOP_DATA_OPT_CYCLE_STRAIN, &data_float);
+                strain_to_led(data_float);
+                break;
+            case DATA_SELECTION_WORKOUT:
+                get_whoop_data(handle, WHOOP_DATA_OPT_WORKOUT_STRAIN, &data_float);
+                strain_to_led(data_float);
+                break;
+        }
     }
  }
 
