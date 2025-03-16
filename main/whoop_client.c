@@ -13,6 +13,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_system.h"
+#include "nvs.h"
 #include "nvs_flash.h"
 #include "esp_event.h"
 #include "esp_netif.h"
@@ -34,6 +35,7 @@
 static const char *TAG = "WHOOP CLIENT";
 extern const char whoop_we1_pem_start[] asm("_binary_whoop_we1_pem_start");
 extern const char whoop_we1_pem_end[]   asm("_binary_whoop_we1_pem_end");
+nvs_handle_t g_nvs_handle;
 
 typedef enum whoop_event_type
 {
@@ -44,6 +46,7 @@ typedef enum whoop_event_type
     WHOOP_EVENT_TYPE_ACCESS_TOKEN
 } whoop_event_type_n;
 
+size_t g_refresh_token_buffer_len = 128;
 typedef struct whoop_rest_client
 {
     char *server_response;
@@ -394,10 +397,17 @@ static void parse_token_json_response(whoop_rest_client_t *whoop_rest_client)
     if(json)
     {
         strcpy(whoop_rest_client->access_token, cJSON_GetStringValue(cJSON_GetObjectItem(json, "access_token")));
-        ESP_LOGI(TAG, "Access token: %s", whoop_rest_client->access_token);
         strcpy(whoop_rest_client->refresh_token, cJSON_GetStringValue(cJSON_GetObjectItem(json, "refresh_token")));
-        ESP_LOGI(TAG, "Refresh token: %s", whoop_rest_client->refresh_token);
         const cJSON *expires = cJSON_GetObjectItem(json, "expires_in");
+        if(ESP_OK == nvs_set_str(g_nvs_handle, "token", whoop_rest_client->refresh_token))
+        {
+            ESP_LOGI(TAG, "Refresh token set to NVS Data: %s", whoop_rest_client->refresh_token);
+            nvs_commit(g_nvs_handle);
+        }
+        else
+        {
+            ESP_LOGI(TAG, "Error setting token to NVS: %s", whoop_rest_client->refresh_token);
+        }
         if(expires)
             whoop_rest_client->expires_in = (int) expires->valuedouble;
         cJSON_Delete(json);
@@ -628,6 +638,27 @@ esp_http_client_config_t whoop_config = {
 void init_whoop_tls_client(void)
 {
     client = esp_http_client_init(&whoop_config);
+
+    esp_err_t err = nvs_flash_init();
+    if(!err)
+    {
+        err = nvs_open("whoop_nvs", NVS_READWRITE, &g_nvs_handle);
+    }
+    if(err)
+    {
+        ESP_LOGI(TAG, "Could not open NVS partition.");
+        return;
+    }
+    if(ESP_ERR_NVS_NOT_FOUND == nvs_get_str(g_nvs_handle, "token", g_whoop_rest_client.refresh_token, &g_refresh_token_buffer_len))
+    {
+        ESP_LOGI(TAG, "Token not found in NVS... attempting to create now.");
+        nvs_set_str(g_nvs_handle, "token", "000");
+    }
+    else
+    {
+        ESP_LOGI(TAG, "Found NVS token: %s",g_whoop_rest_client.refresh_token);
+        whoop_get_token(g_whoop_rest_client.refresh_token, TOKEN_REQUEST_TYPE_REFRESH);
+    }
 }
 
 void end_whoop_tls_client(void)
