@@ -26,6 +26,7 @@
 #include "whoop_data.h"
 #include "whoop_client.h"
 #include "gpio_manager.h"
+#include "i2c_led.h"
 
 //Timer information
 TimerHandle_t task_timer_handle;
@@ -512,11 +513,14 @@ char *data_selection_text[] = {"Selected recovery", "Selected Sleep", "Selected 
  {
     int button_state = 0;
     float data_float = 0.0;
+    char data_str[17];
     whoop_data_handle_t handle = NULL;
     get_touch_button_state(&button_state);
     int data_selection = g_data_selection;
     if(button_state != g_last_button_state)
     {
+        i2c_lcd_1602_clear();
+        i2c_lcd_1602_home();
         g_last_button_state = button_state;
         for(int i =1; i <= 4; i++)
         {
@@ -547,18 +551,34 @@ char *data_selection_text[] = {"Selected recovery", "Selected Sleep", "Selected 
             case DATA_SELECTION_RECOVERY:
                 get_whoop_data(handle, WHOOP_DATA_OPT_RECOVERY_RECOVERY_SCORE, &data_float);
                 recovery_to_led(data_float);
+                i2c_lcd_1602_print("Recovery", sizeof(char) * strlen("Recovery"));
+                i2c_lcd_1602_setCursor(0,1);
+                sprintf(data_str, "Score: %0.2f",data_float);
+                i2c_lcd_1602_print(data_str, sizeof(char) * strlen(data_str));
                 break;
             case DATA_SELECTION_SLEEP:
                 get_whoop_data(handle, WHOOP_DATA_OPT_SLEEP_SLEEP_PERFORMANCE_PERCENTAGE, &data_float);
                 sleep_percentage_to_led(data_float);
+                i2c_lcd_1602_print("Sleep", sizeof(char) * strlen("Sleep"));
+                i2c_lcd_1602_setCursor(0,1);
+                sprintf(data_str, "Perf: %0.2f%%",data_float);
+                i2c_lcd_1602_print(data_str, sizeof(char) * strlen(data_str));
                 break;
             case DATA_SELECTION_CYCLE:
                 get_whoop_data(handle, WHOOP_DATA_OPT_CYCLE_STRAIN, &data_float);
                 strain_to_led(data_float);
+                i2c_lcd_1602_print("Cycle", sizeof(char) * strlen("Cycle"));
+                i2c_lcd_1602_setCursor(0,1);
+                sprintf(data_str, "Strain: %0.2f",data_float);
+                i2c_lcd_1602_print(data_str, sizeof(char) * strlen(data_str));
                 break;
             case DATA_SELECTION_WORKOUT:
                 get_whoop_data(handle, WHOOP_DATA_OPT_WORKOUT_STRAIN, &data_float);
                 strain_to_led(data_float);
+                i2c_lcd_1602_print("Workout", sizeof(char) * strlen("Workout"));
+                i2c_lcd_1602_setCursor(0,1);
+                sprintf(data_str, "Strain: %0.2f",data_float);
+                i2c_lcd_1602_print(data_str, sizeof(char) * strlen(data_str));
                 break;
         }
     }
@@ -580,6 +600,8 @@ void app_main()
     initialize_gpio();
     get_touch_button_state(&g_last_button_state);
 
+    i2c_lcd_1602_init();
+    i2c_lcd_1602_print("No Data.", sizeof(char) * 8);
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &connect_handler, &server));
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &disconnect_handler, &server));
 

@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 
-void i2c_lcd_1602_init(void);
+int i2c_lcd_1602_init(void);
 void i2c_lcd_1602_clear(void);
 void i2c_lcd_1602_home(void);
 void i2c_lcd_1602_noDisplay(void);
