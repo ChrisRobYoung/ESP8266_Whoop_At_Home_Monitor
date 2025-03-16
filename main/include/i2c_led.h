@@ -25,5 +25,6 @@ void i2c_lcd_1602_backlight(void);
 void i2c_lcd_1602_autoscroll(void);
 void i2c_lcd_1602_noAutoscroll(void);
 void i2c_lcd_1602_setCursor(uint8_t col, uint8_t row); 
+void i2c_lcd_1602_print(const char *buffer, int buffer_len);
 
 #endif //_I2C_LED_H_

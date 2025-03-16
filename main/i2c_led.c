@@ -274,5 +274,13 @@ void i2c_lcd_1602_noAutoscroll(void)
 void i2c_lcd_1602_setCursor(uint8_t col, uint8_t row)
 {
     int row_offsets[] = { 0x00, 0x40};
-	ESP_ERROR_CHECK( i2c_lcd_write_byte( LCD_SETDDRAMADDR | (col + row_offsets[row]) ) );
+	ESP_ERROR_CHECK( i2c_lcd_write_byte( LCD_SETDDRAMADDR | (col + row_offsets[row]), 0 ) );
+}
+
+void i2c_lcd_1602_print(const char *buffer, int buffer_len)
+{
+    for(int char_index = 0; char_index < buffer_len; char_index++)
+    {
+        ESP_ERROR_CHECK( i2c_lcd_write_byte( (uint8_t) buffer[char_index], 0 ) );
+    }
 }
