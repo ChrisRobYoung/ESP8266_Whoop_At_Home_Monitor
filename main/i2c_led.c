@@ -59,6 +59,9 @@
 #define Rw 0x02  // Read/Write bit
 #define Rs 0x01  // Register select bit
 
+// Local variables
+uint8_t g_backlight = LCD_BACKLIGHT;
+
 static esp_err_t i2c_master_init()
 {
     i2c_config_t conf;
@@ -108,7 +111,7 @@ static esp_err_t i2c_set_byte(uint8_t data)
  */
 static esp_err_t i2c_lcd_write_enable(uint8_t data)
 {
-    uint8_t data_to_send = data | LCD_BACKLIGHT;
+    uint8_t data_to_send = data | g_backlight;
     esp_err_t ret;
     ret = i2c_set_byte(data_to_send | En);
     if (ret != ESP_OK) {
@@ -267,11 +270,13 @@ void i2c_lcd_1602_shiftDecrement(void)
 }
 void i2c_lcd_1602_noBacklight(void)
 {
-    
+    i2c_set_byte(LCD_NOBACKLIGHT);
+    g_backlight = LCD_NOBACKLIGHT;
 }
 void i2c_lcd_1602_backlight(void)
 {
-    
+    g_backlight = LCD_BACKLIGHT;
+    i2c_set_byte(LCD_BACKLIGHT);
 }
 void i2c_lcd_1602_autoscroll(void)
 {
