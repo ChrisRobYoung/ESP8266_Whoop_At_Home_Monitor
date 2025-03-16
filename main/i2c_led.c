@@ -73,6 +73,19 @@ static esp_err_t i2c_master_init()
     return ESP_OK;
 }
 
+static esp_err_t i2c_set_byte(uint8_t data)
+{
+    int ret;
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, 0x27 << 1 | WRITE_BIT, ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, data, ACK_CHECK_EN);
+    i2c_master_stop(cmd);
+    ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    return ret;
+}
+
 /**
  * @brief test code to write mpu6050
  *
@@ -96,29 +109,13 @@ static esp_err_t i2c_master_init()
 static esp_err_t i2c_lcd_write_enable(uint8_t data)
 {
     uint8_t data_to_send = data | LCD_BACKLIGHT;
-    int ret;
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, 0x27 << 1 | WRITE_BIT, ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, data_to_send | En, ACK_CHECK_EN);
-    //i2c_master_write_byte(cmd, data & ~En, ACK_CHECK_EN);
-    i2c_master_stop(cmd);
-    ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-
+    esp_err_t ret;
+    ret = i2c_set_byte(data_to_send | En);
     if (ret != ESP_OK) {
         return ret;
     }
     vTaskDelay(pdMS_TO_TICKS(1));
-
-    cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, 0x27 << 1 | WRITE_BIT, ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, data_to_send & ~En, ACK_CHECK_EN);
-    i2c_master_stop(cmd);
-    ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-
+    ret = i2c_set_byte(data_to_send & ~En);
     vTaskDelay(pdMS_TO_TICKS(50));
     return ret;
 }
