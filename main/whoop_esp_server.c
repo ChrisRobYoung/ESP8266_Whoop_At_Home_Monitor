@@ -1,9 +1,11 @@
+#include "esp_event.h"
 #include "esp_log.h"
 #include <esp_http_server.h>
 
 #include "whoop_data.h"
 #include "whoop_client.h"
 
+static const char *TAG="WHOOP REST SERVER";
 
 #define AUTH_ENDPOINT_CBK "/authenticate/callback"
 const char * REDIRECT_URI_ESP8266_WHOOP = "https://api.prod.whoop.com/oauth/oauth2/auth"

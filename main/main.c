@@ -7,6 +7,7 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 #include <sys/param.h>
+#include <string.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -16,12 +17,8 @@
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_event.h"
-#include "esp_event.h"
 #include "esp_wifi.h"
 #include "mdns.h"
-#include "nvs.h"
-#include "nvs_flash.h"
-#include <esp_http_server.h>
 
 #include "whoop_data.h"
 #include "whoop_client.h"
@@ -281,7 +278,7 @@ char *data_selection_text[] = {"Selected recovery", "Selected Sleep", "Selected 
 
 void app_main()
 {
-    ESP_ERROR_CHECK(nvs_flash_init());
+    //ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
     
     ESP_ERROR_CHECK(esp_event_loop_create_default());
@@ -289,7 +286,7 @@ void app_main()
 
     ESP_ERROR_CHECK(connect_to_wifi());
     init_whoop_data();
-    init_whoop_tls_client();
+    
     
     initialize_gpio();
     get_touch_button_state(&g_last_button_state);
@@ -298,7 +295,7 @@ void app_main()
     i2c_lcd_1602_print("No Data.", 8);
     
     init_whoop_server();
-    
+    init_whoop_tls_client();
     //Start task loop
     task_timer_handle = xTimerCreate("Timer", pdMS_TO_TICKS(100) , pdTRUE,( void * ) 0,vTimerCallback);
     xTimerStart( task_timer_handle, 0 );
