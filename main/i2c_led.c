@@ -235,19 +235,11 @@ void i2c_lcd_1602_cursor(void)
 }
 void i2c_lcd_1602_scrollDisplayLeft(void)
 {
-    
+    ESP_ERROR_CHECK(i2c_lcd_write_byte(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVELEFT, 0)); 
 }
 void i2c_lcd_1602_scrollDisplayRight(void)
 {
-    
-}
-void i2c_lcd_1602_printLeft(void)
-{
-    
-}
-void i2c_lcd_1602_printRight(void)
-{
-    
+    ESP_ERROR_CHECK(i2c_lcd_write_byte(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVERIGHT, 0)); 
 }
 void i2c_lcd_1602_leftToRight(void)
 {
@@ -258,14 +250,6 @@ void i2c_lcd_1602_rightToLeft(void)
 {
     g_entry_mode &= ~LCD_MOVERIGHT;
     ESP_ERROR_CHECK(i2c_lcd_write_byte(LCD_ENTRYMODESET | g_entry_mode, 0)); 
-}
-void i2c_lcd_1602_shiftIncrement(void)
-{
-    
-}
-void i2c_lcd_1602_shiftDecrement(void)
-{
-    
 }
 void i2c_lcd_1602_noBacklight(void)
 {
