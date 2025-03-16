@@ -61,6 +61,7 @@
 
 // Local variables
 uint8_t g_backlight = LCD_BACKLIGHT;
+uint8_t g_display_control = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF;
 
 static esp_err_t i2c_master_init()
 {
@@ -160,81 +161,76 @@ int i2c_lcd_1602_init(void)
     vTaskDelay(pdMS_TO_TICKS(50));
   
     cmd_data = 0x30;
-    ESP_LOGI(TAG, "Writing command data: 0x%x", cmd_data);
     i2c_lcd_write_enable( cmd_data );
     vTaskDelay(pdMS_TO_TICKS(5));
     // second try
-    ESP_LOGI(TAG, "Writing command data: 0x%x", cmd_data);
     i2c_lcd_write_enable(cmd_data);
     vTaskDelay(pdMS_TO_TICKS(1));
    
     // third go!
-    ESP_LOGI(TAG, "Writing command data: 0x%x", cmd_data);
     ESP_ERROR_CHECK(i2c_lcd_write_enable(cmd_data)); 
     
     // finally, set to 4-bit interface
     cmd_data = 0x20;
-    ESP_LOGI(TAG, "Writing command data: 0x%x", cmd_data);
     ESP_ERROR_CHECK(i2c_lcd_write_enable(cmd_data)); 
 
 	// set # lines, font size, etc.
     cmd_data = LCD_FUNCTIONSET | LCD_4BITMODE |LCD_2LINE | LCD_5x8DOTS;
-    ESP_LOGI(TAG, "Writing command data: 0x%x", cmd_data);
     ESP_ERROR_CHECK(i2c_lcd_write_byte(cmd_data, 0));  
 	
 	// turn the display on with no cursor or blinking default
-    cmd_data = LCD_DISPLAYCONTROL | LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF;
-    ESP_LOGI(TAG, "Writing command data: 0x%x", cmd_data);
+    cmd_data = LCD_DISPLAYCONTROL | g_display_control;
     ESP_ERROR_CHECK(i2c_lcd_write_byte(cmd_data, 0));  
 	
 	// clear it off
-    cmd_data = LCD_CLEARDISPLAY;
-    ESP_LOGI(TAG, "Writing command data: 0x%x", cmd_data);
-    ESP_ERROR_CHECK(i2c_lcd_write_byte(cmd_data, 0)); 
+    i2c_lcd_1602_clear();
 	
     // set the entry mode
     // Initialize to default text direction (for roman languages)
     cmd_data = LCD_ENTRYMODESET | LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
-    ESP_LOGI(TAG, "Writing command data: 0x%x", cmd_data);
     ESP_ERROR_CHECK(i2c_lcd_write_byte(cmd_data,0));
 
-    cmd_data = LCD_RETURNHOME;
-    ESP_LOGI(TAG, "Writing command data: 0x%x", cmd_data);
-    ESP_ERROR_CHECK(i2c_lcd_write_byte(cmd_data, 0));
+    i2c_lcd_1602_home();
     return ESP_OK;
 }
 
 void i2c_lcd_1602_clear(void)
 {
-
+    ESP_ERROR_CHECK(i2c_lcd_write_byte(LCD_CLEARDISPLAY, 0)); 
 }
 void i2c_lcd_1602_home(void)
 {
-    
+    ESP_ERROR_CHECK(i2c_lcd_write_byte(LCD_RETURNHOME, 0));
 }
 void i2c_lcd_1602_noDisplay(void)
 {
-    
+    g_display_control &= ~LCD_DISPLAYON;
+    ESP_ERROR_CHECK(i2c_lcd_write_byte(LCD_DISPLAYCONTROL | g_display_control, 0)); 
 }
 void i2c_lcd_1602_display(void)
 {
-    
+    g_display_control |= LCD_DISPLAYON;
+    ESP_ERROR_CHECK(i2c_lcd_write_byte(LCD_DISPLAYCONTROL | g_display_control, 0)); 
 }
 void i2c_lcd_1602_noBlink(void)
 {
-    
+    g_display_control &= ~LCD_BLINKON;
+    ESP_ERROR_CHECK(i2c_lcd_write_byte(LCD_DISPLAYCONTROL | g_display_control, 0)); 
 }
 void i2c_lcd_1602_blink(void)
 {
-    
+    g_display_control |= LCD_BLINKON;
+    ESP_ERROR_CHECK(i2c_lcd_write_byte(LCD_DISPLAYCONTROL | g_display_control, 0)); 
 }
 void i2c_lcd_1602_noCursor(void)
 {
-    
+    g_display_control &= ~LCD_CURSORON;
+    ESP_ERROR_CHECK(i2c_lcd_write_byte(LCD_DISPLAYCONTROL | g_display_control, 0)); 
 }
 void i2c_lcd_1602_cursor(void)
 {
-    
+    g_display_control |= LCD_CURSORON;
+    ESP_ERROR_CHECK(i2c_lcd_write_byte(LCD_DISPLAYCONTROL | g_display_control, 0)); 
 }
 void i2c_lcd_1602_scrollDisplayLeft(void)
 {
