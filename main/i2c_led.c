@@ -62,6 +62,7 @@
 // Local variables
 uint8_t g_backlight = LCD_BACKLIGHT;
 uint8_t g_display_control = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF;
+uint8_t g_entry_mode = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
 
 static esp_err_t i2c_master_init()
 {
@@ -179,16 +180,14 @@ int i2c_lcd_1602_init(void)
     ESP_ERROR_CHECK(i2c_lcd_write_byte(cmd_data, 0));  
 	
 	// turn the display on with no cursor or blinking default
-    cmd_data = LCD_DISPLAYCONTROL | g_display_control;
-    ESP_ERROR_CHECK(i2c_lcd_write_byte(cmd_data, 0));  
+    i2c_lcd_1602_display(); 
 	
 	// clear it off
     i2c_lcd_1602_clear();
 	
     // set the entry mode
     // Initialize to default text direction (for roman languages)
-    cmd_data = LCD_ENTRYMODESET | LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
-    ESP_ERROR_CHECK(i2c_lcd_write_byte(cmd_data,0));
+    i2c_lcd_1602_leftToRight();
 
     i2c_lcd_1602_home();
     return ESP_OK;
@@ -197,10 +196,12 @@ int i2c_lcd_1602_init(void)
 void i2c_lcd_1602_clear(void)
 {
     ESP_ERROR_CHECK(i2c_lcd_write_byte(LCD_CLEARDISPLAY, 0)); 
+    vTaskDelay(pdMS_TO_TICKS(2));
 }
 void i2c_lcd_1602_home(void)
 {
     ESP_ERROR_CHECK(i2c_lcd_write_byte(LCD_RETURNHOME, 0));
+    vTaskDelay(pdMS_TO_TICKS(2));
 }
 void i2c_lcd_1602_noDisplay(void)
 {
@@ -250,11 +251,13 @@ void i2c_lcd_1602_printRight(void)
 }
 void i2c_lcd_1602_leftToRight(void)
 {
-    
+    g_entry_mode |= LCD_MOVERIGHT;
+    ESP_ERROR_CHECK(i2c_lcd_write_byte(LCD_ENTRYMODESET | g_entry_mode, 0)); 
 }
 void i2c_lcd_1602_rightToLeft(void)
 {
-    
+    g_entry_mode &= ~LCD_MOVERIGHT;
+    ESP_ERROR_CHECK(i2c_lcd_write_byte(LCD_ENTRYMODESET | g_entry_mode, 0)); 
 }
 void i2c_lcd_1602_shiftIncrement(void)
 {
@@ -266,21 +269,23 @@ void i2c_lcd_1602_shiftDecrement(void)
 }
 void i2c_lcd_1602_noBacklight(void)
 {
-    i2c_set_byte(LCD_NOBACKLIGHT);
     g_backlight = LCD_NOBACKLIGHT;
+    ESP_ERROR_CHECK(i2c_set_byte(LCD_NOBACKLIGHT));
 }
 void i2c_lcd_1602_backlight(void)
 {
     g_backlight = LCD_BACKLIGHT;
-    i2c_set_byte(LCD_BACKLIGHT);
+    ESP_ERROR_CHECK(i2c_set_byte(LCD_BACKLIGHT));
 }
 void i2c_lcd_1602_autoscroll(void)
 {
-    
+    g_entry_mode |= LCD_ENTRYSHIFTINCREMENT;
+    ESP_ERROR_CHECK(i2c_lcd_write_byte(LCD_ENTRYMODESET | g_entry_mode, 0)); 
 }
 void i2c_lcd_1602_noAutoscroll(void)
 {
-    
+    g_entry_mode &= ~LCD_ENTRYSHIFTINCREMENT;
+    ESP_ERROR_CHECK(i2c_lcd_write_byte(LCD_ENTRYMODESET | g_entry_mode, 0)); 
 }
 void i2c_lcd_1602_setCursor(uint8_t, uint8_t)
 {
