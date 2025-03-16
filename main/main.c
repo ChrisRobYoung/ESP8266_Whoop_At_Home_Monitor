@@ -56,18 +56,13 @@ static void initialise_mdns(void)
 
     //structure with TXT records
     mdns_txt_item_t serviceTxtData[3] = {
-        {"board","esp32"},
+        {"board","esp8266"},
         {"u","user"},
         {"p","password"}
     };
 
     //initialize service
-    ESP_ERROR_CHECK( mdns_service_add("ESP32-WebServer", "_http", "_tcp", 80, serviceTxtData, 3) );
-    //add another TXT item
-    ESP_ERROR_CHECK( mdns_service_txt_item_set("_http", "_tcp", "path", "/foobar") );
-    //change TXT item value
-    ESP_ERROR_CHECK( mdns_service_txt_item_set("_http", "_tcp", "u", "admin") );
-    //free(hostname);
+    ESP_ERROR_CHECK( mdns_service_add("ESP8266-WebServer", "_http", "_tcp", 80, serviceTxtData, 3) );
 }
 
 static EventGroupHandle_t s_connect_event_group;
@@ -121,22 +116,7 @@ static void start(void)
     ESP_ERROR_CHECK(esp_wifi_connect());
 }
 
-static void stop(void)
-{
-    esp_err_t err = esp_wifi_stop();
-    if (err == ESP_ERR_WIFI_NOT_INIT) {
-        return;
-    }
-    ESP_ERROR_CHECK(err);
-
-    ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &on_wifi_disconnect));
-    ESP_ERROR_CHECK(esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &on_got_ip));
-
-
-    ESP_ERROR_CHECK(esp_wifi_deinit());
-}
-
-esp_err_t example_connect(void)
+esp_err_t connect_to_wifi(void)
 {
     if (s_connect_event_group != NULL) {
         return ESP_ERR_INVALID_STATE;
@@ -150,18 +130,6 @@ esp_err_t example_connect(void)
     return ESP_OK;
 }
 
-esp_err_t example_disconnect(void)
-{
-    if (s_connect_event_group == NULL) {
-        return ESP_ERR_INVALID_STATE;
-    }
-    vEventGroupDelete(s_connect_event_group);
-    s_connect_event_group = NULL;
-    stop();
-    ESP_LOGI(TAG, "Disconnected from %s", s_connection_name);
-    s_connection_name[0] = '\0';
-    return ESP_OK;
-}
 
 esp_err_t auth_get_handler(httpd_req_t *req)
 {
@@ -551,34 +519,34 @@ char *data_selection_text[] = {"Selected recovery", "Selected Sleep", "Selected 
             case DATA_SELECTION_RECOVERY:
                 get_whoop_data(handle, WHOOP_DATA_OPT_RECOVERY_RECOVERY_SCORE, &data_float);
                 recovery_to_led(data_float);
-                i2c_lcd_1602_print("Recovery", sizeof(char) * strlen("Recovery"));
+                i2c_lcd_1602_print("Recovery", strlen("Recovery"));
                 i2c_lcd_1602_setCursor(0,1);
                 sprintf(data_str, "Score: %0.2f",data_float);
-                i2c_lcd_1602_print(data_str, sizeof(char) * strlen(data_str));
+                i2c_lcd_1602_print(data_str, strlen(data_str));
                 break;
             case DATA_SELECTION_SLEEP:
                 get_whoop_data(handle, WHOOP_DATA_OPT_SLEEP_SLEEP_PERFORMANCE_PERCENTAGE, &data_float);
                 sleep_percentage_to_led(data_float);
-                i2c_lcd_1602_print("Sleep", sizeof(char) * strlen("Sleep"));
+                i2c_lcd_1602_print("Sleep", strlen("Sleep"));
                 i2c_lcd_1602_setCursor(0,1);
                 sprintf(data_str, "Perf: %0.2f%%",data_float);
-                i2c_lcd_1602_print(data_str, sizeof(char) * strlen(data_str));
+                i2c_lcd_1602_print(data_str, strlen(data_str));
                 break;
             case DATA_SELECTION_CYCLE:
                 get_whoop_data(handle, WHOOP_DATA_OPT_CYCLE_STRAIN, &data_float);
                 strain_to_led(data_float);
-                i2c_lcd_1602_print("Cycle", sizeof(char) * strlen("Cycle"));
+                i2c_lcd_1602_print("Cycle", strlen("Cycle"));
                 i2c_lcd_1602_setCursor(0,1);
                 sprintf(data_str, "Strain: %0.2f",data_float);
-                i2c_lcd_1602_print(data_str, sizeof(char) * strlen(data_str));
+                i2c_lcd_1602_print(data_str, strlen(data_str));
                 break;
             case DATA_SELECTION_WORKOUT:
                 get_whoop_data(handle, WHOOP_DATA_OPT_WORKOUT_STRAIN, &data_float);
                 strain_to_led(data_float);
-                i2c_lcd_1602_print("Workout", sizeof(char) * strlen("Workout"));
+                i2c_lcd_1602_print("Workout", strlen("Workout"));
                 i2c_lcd_1602_setCursor(0,1);
                 sprintf(data_str, "Strain: %0.2f",data_float);
-                i2c_lcd_1602_print(data_str, sizeof(char) * strlen(data_str));
+                i2c_lcd_1602_print(data_str, strlen(data_str));
                 break;
         }
     }
@@ -593,7 +561,7 @@ void app_main()
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     initialise_mdns();
 
-    ESP_ERROR_CHECK(example_connect());
+    ESP_ERROR_CHECK(connect_to_wifi());
     init_whoop_data();
     init_whoop_tls_client();
     
@@ -601,7 +569,7 @@ void app_main()
     get_touch_button_state(&g_last_button_state);
 
     i2c_lcd_1602_init();
-    i2c_lcd_1602_print("No Data.", sizeof(char) * 8);
+    i2c_lcd_1602_print("No Data.", 8);
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &connect_handler, &server));
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &disconnect_handler, &server));
 
