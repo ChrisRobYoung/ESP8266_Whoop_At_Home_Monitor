@@ -28,6 +28,7 @@
 
 //Timer information
 TimerHandle_t task_timer_handle;
+TimerHandle_t task_timer_update_data_handle;
 static int g_last_button_state = 0;
 
 #define MDNS_HOSTNAME "esp8266-whoop-api"
@@ -198,6 +199,7 @@ typedef enum current_data_selection
     DATA_SELECTION_WORKOUT
 } current_data_selection_t;
 
+static int g_update_data = 1;
 current_data_selection_t g_data_selection = DATA_SELECTION_WORKOUT;
 char *data_selection_text[] = {"Selected recovery", "Selected Sleep", "Selected Cycle", "Selected Workout"};
  void vTimerCallback( TimerHandle_t xTimer )
@@ -208,11 +210,12 @@ char *data_selection_text[] = {"Selected recovery", "Selected Sleep", "Selected 
     whoop_data_handle_t handle = NULL;
     get_touch_button_state(&button_state);
     int data_selection = g_data_selection;
-    if(button_state != g_last_button_state)
+    if(button_state != g_last_button_state || g_update_data)
     {
         i2c_lcd_1602_clear();
         i2c_lcd_1602_home();
         g_last_button_state = button_state;
+        g_update_data = 0;
         for(int i =1; i <= 4; i++)
         {
             data_selection = (g_data_selection + i) % 4;
@@ -236,7 +239,12 @@ char *data_selection_text[] = {"Selected recovery", "Selected Sleep", "Selected 
         g_data_selection = data_selection;
         ESP_LOGI(TAG, data_selection_text[g_data_selection]);
         
-        if(!handle) return;
+        if(!handle)
+        {
+            i2c_lcd_1602_print("No Data!", 8);
+            set_rgb_led_value(255, 0, 0);
+            return;
+        }
         switch(data_selection)
         {
             case DATA_SELECTION_RECOVERY:
@@ -275,6 +283,14 @@ char *data_selection_text[] = {"Selected recovery", "Selected Sleep", "Selected 
     }
  }
 
+ void vTimerCallbackUpdateData( TimerHandle_t xTimer )
+ {
+    whoop_get_data(WHOOP_API_REQUEST_TYPE_SLEEP);
+    whoop_get_data(WHOOP_API_REQUEST_TYPE_WORKOUT);
+    whoop_get_data(WHOOP_API_REQUEST_TYPE_RECOVERY);
+    whoop_get_data(WHOOP_API_REQUEST_TYPE_CYCLE);
+    g_update_data = 1;
+ }
 
 void app_main()
 {
@@ -292,11 +308,14 @@ void app_main()
     get_touch_button_state(&g_last_button_state);
 
     i2c_lcd_1602_init();
-    i2c_lcd_1602_print("No Data.", 8);
     
     init_whoop_server();
     init_whoop_tls_client();
+
     //Start task loop
     task_timer_handle = xTimerCreate("Timer", pdMS_TO_TICKS(100) , pdTRUE,( void * ) 0,vTimerCallback);
     xTimerStart( task_timer_handle, 0 );
+    task_timer_update_data_handle = xTimerCreate("Update Data", pdMS_TO_TICKS(300000) , pdTRUE,( void * ) 0,vTimerCallbackUpdateData);
+    vTimerCallbackUpdateData(task_timer_update_data_handle);
+    xTimerStart( task_timer_update_data_handle, 0 );
 }
