@@ -87,7 +87,7 @@ static esp_err_t i2c_master_init()
     conf.sda_pullup_en = 1;
     conf.scl_io_num = I2C_MASTER_SCL_IO;
     conf.scl_pullup_en = 1;
-    conf.clk_stretch_tick = 100; // 300 ticks, Clock stretch is about 210us, you can make changes according to the actual situation.
+    conf.clk_stretch_tick = 30; // 30 ticks, Clock stretch is about 21us, you can make changes according to the actual situation.
     ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM_0, conf.mode));
     ESP_ERROR_CHECK(i2c_param_config(I2C_NUM_0, &conf));
     return ESP_OK;
@@ -134,9 +134,9 @@ static esp_err_t i2c_lcd_write_enable(uint8_t data)
     if (ret != ESP_OK) {
         return ret;
     }
-    vTaskDelay(pdMS_TO_TICKS(1));
+    vTaskDelay(10);
     ret = i2c_set_byte(data_to_send & ~En);
-    vTaskDelay(pdMS_TO_TICKS(50));
+    vTaskDelay(pdMS_TO_TICKS(10));
     return ret;
 }
 
