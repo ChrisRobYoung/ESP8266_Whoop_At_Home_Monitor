@@ -25,7 +25,6 @@ This project collects Whoop data using the developer Whoop API and displays info
 Excuse the poor quality of the video. The LCD dispaly does not show up well, but this should give a general example of how the prototype works.
 
 ## Notes 
-- The authentication process for OAUTH2.0 requires the user to manually redirect the access code... this could improved by having the redirect uri link directly to the ESP8266. This will require the ESP8266 to enable SSL verification with Whoop's server.
+- The authentication process for OAUTH2.0 requires the user to manually redirect the access code... this could improved by having the redirect uri link directly to the ESP8266. This will require the ESP8266 to enable SSL verification with Whoop's server. This is partially solved by remembering the refresh code, so as long as the refresh code is valid the device will only have to be approved once.
 - Network communication can enter a state where the TLS socket times out and is not restarted. This will need to be improved for reliability.
-- At the moment the device does not attempt to refresh its token until it recieves a 401 response. This could be configured to refresh its token prior to timeout.
 - Right now the data point to display is hard coded, but another button could be implement to allow the user to cycle data points within a Whoop category.
